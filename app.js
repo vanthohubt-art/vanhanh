@@ -1,6 +1,6 @@
 // App vận hành Home Studio — bản thử giai đoạn 1 (hợp đồng · lịch · thu tiền).
 // Màn hình chỉ gọi kho.js. Bản thật (Supabase) bắt đăng nhập; bản thử chọn "đang dùng" ở góc trên.
-import * as kho from './kho.js?v=20261108b';
+import * as kho from './kho.js?v=20261108c';
 
 const $ = (s, g = document) => g.querySelector(s);
 const tien = (n) => (Math.round(Number(n) || 0)).toLocaleString('vi-VN') + 'đ';
@@ -212,8 +212,9 @@ async function trangCa(id) {
     </div>` : KHONG_TIEN}
     <div class="the">
       <h2>Ekip</h2>
-      <div id="ekip">${ekipHtml(h.ekip)}</div>
-      <button class="nut nho phu" id="luu-ekip">Lưu ekip</button>
+      ${coTien() ? `<div id="ekip">${ekipHtml(h.ekip)}</div>
+      <button class="nut nho phu" id="luu-ekip">Lưu ekip</button>`
+        : `<p style="margin:0">${h.ekip.map((e) => esc(e.ten) + " · " + (VAI[e.vai] || e.vai)).join("<br>") || "—"}</p><p class="mo" style="margin:6px 0 0">Chỉ sale online hoặc anh Thọ sửa ekip.</p>`}
     </div>
     <div class="the">
       <h2>Gói gồm</h2>
@@ -271,8 +272,8 @@ async function trangCa(id) {
     bao('Đã ghi phiếu thu'); trangCa(id);
   });
   }
-  batChip($('#ekip'));
-  $('#luu-ekip').onclick = () => chay(async () => { await kho.datEkip(id, docEkip($('#ekip')), toi); bao('Đã lưu ekip'); trangCa(id); });
+  if (coTien()) batChip($('#ekip'));
+  if (coTien()) $('#luu-ekip').onclick = () => chay(async () => { await kho.datEkip(id, docEkip($('#ekip')), toi); bao('Đã lưu ekip'); trangCa(id); });
 }
 
 // ═════════ LỊCH ═════════
