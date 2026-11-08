@@ -1,0 +1,55 @@
+/* App vận hành Home Studio — cùng bảng màu website, ưu tiên điện thoại. */
+:root {
+  --nen: #FBF7F2; --nen-2: #F3EBE1; --the: #FFFFFF; --chu: #2B211B; --chu-nhat: #6E5F55; --vien: #E6DACC;
+  --nhan: #B4532A; --nhan-dam: #8F3F1E; --nhan-nhat: #F6E3D8; --xanh: #3F7A55; --xanh-nhat: #E3F1E7; --do: #B3261E; --do-nhat: #FBE4E2;
+  --vang-nhat: #FFF3D6; --bo: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --nen: #1C1714; --nen-2: #251E1A; --the: #2A221E; --chu: #F3ECE6; --chu-nhat: #BDAEA3; --vien: #3D322C;
+    --nhan: #E07A4C; --nhan-dam: #F19A72; --nhan-nhat: #3A2A22; --xanh: #8DC6A0; --xanh-nhat: #1F3326; --do: #F28B82; --do-nhat: #3B1F1D; --vang-nhat: #3A3220;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--nen); color: var(--chu); font: 15px/1.5 "Be Vietnam Pro", system-ui, "Segoe UI", sans-serif; }
+a { color: inherit; }
+h1 { font-size: 22px; margin: 0 0 12px; } h2 { font-size: 17px; margin: 0 0 10px; }
+.dau { position: sticky; top: 0; z-index: 10; background: var(--the); border-bottom: 1px solid var(--vien); }
+.dau .trong { max-width: 980px; margin: 0 auto; padding: 10px 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.logo { font-weight: 800; text-decoration: none; margin-right: auto; } .logo span { color: var(--nhan); }
+.menu { display: flex; gap: 4px; }
+.menu a { text-decoration: none; padding: 7px 11px; border-radius: 999px; color: var(--chu-nhat); font-weight: 600; font-size: 14px; }
+.menu a.dang { background: var(--nhan-nhat); color: var(--nhan-dam); }
+select, input, textarea { font: inherit; color: var(--chu); background: var(--the); border: 1px solid var(--vien); border-radius: 9px; padding: 9px 11px; width: 100%; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--nhan); outline-offset: 0; }
+label { display: grid; gap: 4px; font-weight: 600; font-size: 13px; color: var(--chu-nhat); }
+.toi { width: auto; padding: 6px 10px; font-size: 13px; }
+main { max-width: 980px; margin: 0 auto; padding: 16px 14px 90px; }
+.the { background: var(--the); border: 1px solid var(--vien); border-radius: var(--bo); padding: 14px; margin-bottom: 12px; }
+.luoi { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.hai { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; } @media (max-width: 560px) { .hai { grid-template-columns: 1fr; } }
+.nut { font: inherit; font-weight: 700; border: 0; border-radius: 999px; padding: 10px 16px; cursor: pointer; background: var(--nhan); color: #fff; }
+.nut.phu { background: var(--nen-2); color: var(--chu); } .nut.nho { padding: 6px 12px; font-size: 13px; } .nut:disabled { opacity: .5; }
+.hang-nut { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.so-lieu { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.so-lieu div { background: var(--the); border: 1px solid var(--vien); border-radius: var(--bo); padding: 12px; }
+.so-lieu b { display: block; font-size: 22px; } .so-lieu span { color: var(--chu-nhat); font-size: 13px; }
+.ca { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; text-decoration: none; }
+.ca .ten { font-weight: 700; } .ca .phu { color: var(--chu-nhat); font-size: 13px; } .ca .tien { text-align: right; font-weight: 700; }
+.nhan { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--nen-2); color: var(--chu-nhat); }
+.nhan.xanh { background: var(--xanh-nhat); color: var(--xanh); } .nhan.do { background: var(--do-nhat); color: var(--do); } .nhan.cam { background: var(--nhan-nhat); color: var(--nhan-dam); }
+.chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--vien); border-radius: 999px; padding: 5px 11px; margin: 0 6px 6px 0; cursor: pointer; font-size: 13px; background: var(--the); user-select: none; }
+.chip.chon { background: var(--nhan); border-color: var(--nhan); color: #fff; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; } td, th { padding: 8px 6px; border-bottom: 1px solid var(--vien); text-align: left; vertical-align: top; }
+th { color: var(--chu-nhat); font-size: 12px; font-weight: 700; } td.so { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.buoc { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+.buoc button { flex: 0 0 auto; font: inherit; font-size: 12px; font-weight: 600; border: 1px solid var(--vien); background: var(--the); color: var(--chu-nhat); border-radius: 999px; padding: 6px 10px; cursor: pointer; }
+.buoc button.qua { background: var(--xanh-nhat); color: var(--xanh); border-color: transparent; }
+.buoc button.dang { background: var(--nhan); color: #fff; border-color: var(--nhan); }
+.bao { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--chu); color: var(--nen); padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 30; max-width: 90vw; }
+.bao.loi { background: var(--do); color: #fff; }
+.canh { background: var(--vang-nhat); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin-bottom: 10px; }
+.ngay-lich { font-weight: 800; margin: 16px 0 8px; } .mo { color: var(--chu-nhat); font-size: 13px; }
+.tong td { font-weight: 800; border-bottom: 0; }
+[hidden] { display: none !important; }
+#nguoi a { color: var(--nhan); }
