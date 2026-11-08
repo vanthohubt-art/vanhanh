@@ -1,6 +1,6 @@
 // App vận hành Home Studio — bản thử giai đoạn 1 (hợp đồng · lịch · thu tiền).
 // Màn hình chỉ gọi kho.js. Bản thật (Supabase) bắt đăng nhập; bản thử chọn "đang dùng" ở góc trên.
-import * as kho from './kho.js?v=20261108c';
+import * as kho from './kho.js?v=20261108d';
 
 const $ = (s, g = document) => g.querySelector(s);
 const tien = (n) => (Math.round(Number(n) || 0)).toLocaleString('vi-VN') + 'đ';
@@ -162,7 +162,7 @@ async function trangCa(id) {
   const cos = [...new Set(DM.giaIn.map((g) => g.co))];
   $('#trang').innerHTML = `
     <div class="hang-nut" style="justify-content:space-between"><h1 style="margin:0">${esc(h.khach)}</h1><span class="mo">${h.ma}</span></div>
-    <p class="mo" style="margin:4px 0 12px">${esc(h.sdt)} · ${esc(h.goi_ten)} · ${NGUON[h.nguon] || ''}</p>
+    <p class="mo" style="margin:4px 0 12px">${esc(h.sdt || 'chưa có SĐT')} · ${esc(h.goi_ten)} · ${NGUON[h.nguon] || ''}</p>
     <div class="the">
       <h2>Trạng thái</h2>
       <div class="buoc">${DM.trangThai.map((t) => `<button data-tt="${t.so}" class="${t.so < h.trang_thai ? 'qua' : t.so === h.trang_thai ? 'dang' : ''}">${t.so}. ${esc(t.ten)}</button>`).join('')}</div>
