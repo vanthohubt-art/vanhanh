@@ -1,6 +1,6 @@
 // App vận hành Home Studio — bản thử giai đoạn 1 (hợp đồng · lịch · thu tiền).
 // Màn hình chỉ gọi kho.js. Bản thật (Supabase) bắt đăng nhập; bản thử chọn "đang dùng" ở góc trên.
-import * as kho from './kho.js?v=20261108a';
+import * as kho from './kho.js?v=20261108b';
 
 const $ = (s, g = document) => g.querySelector(s);
 const tien = (n) => (Math.round(Number(n) || 0)).toLocaleString('vi-VN') + 'đ';
@@ -11,7 +11,10 @@ const ngayVN = (d) => (d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '—');
 const THU = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const VAI = { chup: 'Chụp', pts: 'PTS', stylist: 'Stylist', makeup: 'Makeup', sale_offline: 'Sale tại studio' };
 const NGUON = { quang_cao: 'Quảng cáo', gioi_thieu: 'Người quen giới thiệu', khach_cu: 'Khách cũ', tu_tim: 'Tự tìm (Google, fanpage)', chua_ro: 'Chưa rõ' };
-let DM, toi = '';
+let DM, toi = '', vaiToi = [];
+// Chỉ sale online / chủ ghi tiền — máy chủ chặn thật (can_quyen_tien), ở đây chỉ ẩn nút cho đỡ bấm nhầm.
+const coTien = () => vaiToi.includes('sale_online') || vaiToi.includes('chu');
+const KHONG_TIEN = '<div class="the mo">Chỉ sale online hoặc anh Thọ ghi tiền (phát sinh, thu tiền). Cần thêm khoản nào thì nhắn sale.</div>';
 
 function bao(s, loi) {
   const b = Object.assign(document.createElement('div'), { className: 'bao' + (loi ? ' loi' : ''), textContent: s });
@@ -74,6 +77,7 @@ const docEkip = (g) => [...g.querySelectorAll('.chip.chon')].map((c) => ({ nhan_
 function batChip(g) { g.querySelectorAll('.chip').forEach((c) => (c.onclick = () => c.classList.toggle('chon'))); }
 
 async function trangMoi() {
+  if (!coTien()) { $('#trang').innerHTML = '<div class="the">Chỉ sale online hoặc anh Thọ tạo hợp đồng.</div>'; return; }
   const sale = DM.nhanSu.filter((n) => n.vai.includes('sale_online'));
   $('#trang').innerHTML = `
     <h1>Hợp đồng mới</h1>
@@ -176,13 +180,13 @@ async function trangCa(id) {
       <h2>Tiền</h2>
       <table>
         <tr><td>Gói ${esc(h.goi_ten)}${h.giam_gia ? ` (giảm ${tien(h.giam_gia)})` : ''}</td><td class="so">${tien(h.tien.tien_goi)}</td></tr>
-        ${h.phatSinh.map((p) => `<tr><td>${esc(p.mo_ta)}${p.so_luong > 1 ? ' × ' + p.so_luong : ''} <a href="#" data-xoa="${p.id}" class="mo">xoá</a></td><td class="so">${tien(p.thanh_tien)}</td></tr>`).join('')}
+        ${h.phatSinh.map((p) => `<tr><td>${esc(p.mo_ta)}${p.so_luong > 1 ? ' × ' + p.so_luong : ''}${coTien() ? ` <a href="#" data-xoa="${p.id}" class="mo">xoá</a>` : ''}</td><td class="so">${tien(p.thanh_tien)}</td></tr>`).join('')}
         <tr class="tong"><td>Tổng hoá đơn</td><td class="so">${tien(h.tien.tong_hoa_don)}</td></tr>
         ${h.phieuThu.map((p) => `<tr><td class="mo">${p.so_tien < 0 ? 'Hoàn' : 'Đã thu'} ${p.luc} · ${p.hinh_thuc === 'tien_mat' ? 'tiền mặt' : 'chuyển khoản'}${p.ghi_chu ? ' · ' + esc(p.ghi_chu) : ''}</td><td class="so">${tien(-p.so_tien)}</td></tr>`).join('')}
         <tr class="tong"><td>${h.tien.tien_thua ? 'Tiền thừa — hoàn khách hoặc trừ vào in' : 'Còn lại'}</td><td class="so" style="color:${h.tien.con_lai ? 'var(--do)' : 'var(--xanh)'}">${tien(h.tien.tien_thua || h.tien.con_lai)}</td></tr>
       </table>
     </div>
-    <div class="the">
+    ${coTien() ? `<div class="the">
       <h2>Thêm phát sinh</h2>
       <div class="hai">
         <label>Loại<select id="ps-loai"><option value="in">In ảnh</option><option value="phu_thu">Phụ thu</option><option value="khac">Khác</option></select></label>
@@ -205,7 +209,7 @@ async function trangCa(id) {
       </div>
       <label style="margin-top:10px">Ghi chú<input id="pt-ghi" placeholder="Thu nốt sau buổi chụp…"></label>
       <div class="hang-nut" style="margin-top:10px"><button class="nut nho" id="pt-thu">Ghi phiếu thu</button></div>
-    </div>
+    </div>` : KHONG_TIEN}
     <div class="the">
       <h2>Ekip</h2>
       <div id="ekip">${ekipHtml(h.ekip)}</div>
@@ -230,6 +234,7 @@ async function trangCa(id) {
     bao('Đã lưu'); trangCa(id);
   });
 
+  if (coTien()) {
   const veCl = () => {
     const ds = DM.giaIn.filter((g) => g.co === $('#ps-co').value);
     $('#ps-cl').innerHTML = ds.map((g) => `<option value="${g.chat_lieu}" data-gia="${g.gia}">${esc(g.chat_lieu_ten)} — ${tien(g.gia)}</option>`).join('');
@@ -265,6 +270,7 @@ async function trangCa(id) {
     await kho.themPhieuThu(id, { so_tien: $('#pt-tien').value, hinh_thuc: $('#pt-ht').value, ghi_chu: $('#pt-ghi').value.trim() }, toi);
     bao('Đã ghi phiếu thu'); trangCa(id);
   });
+  }
   batChip($('#ekip'));
   $('#luu-ekip').onclick = () => chay(async () => { await kho.datEkip(id, docEkip($('#ekip')), toi); bao('Đã lưu ekip'); trangCa(id); });
 }
@@ -350,18 +356,20 @@ async function vaoApp() {
   if (kho.THAT) {
     const t = await kho.toi();
     if (!t) return trangDangNhap();
-    toi = t.nhan_su?.ma || t.email;   // máy chủ tự lấy người làm từ phiên đăng nhập; biến này chỉ để hiển thị
+    toi = t.nhan_su?.ma || t.email; vaiToi = t.nhan_su?.vai || [];   // máy chủ tự lấy người làm từ phiên đăng nhập; biến này chỉ để hiển thị
     $('#toi').hidden = true;
     $('#nguoi').hidden = false;
     $('#nguoi').innerHTML = `<span>${esc(t.nhan_su?.ten || t.email)}</span> · <a href="#/mat-khau">Đổi MK</a> · <a href="#" id="thoat">Thoát</a>`;
     $('#thoat').onclick = (e) => { e.preventDefault(); chay(async () => { await kho.dangXuat(); trangDangNhap(); }); };
   } else {
     toi = localStorage.getItem('toi') || '';
-    $('#toi').onchange = () => { toi = $('#toi').value; localStorage.setItem('toi', toi); };
+    $('#toi').onchange = () => { toi = $('#toi').value; localStorage.setItem('toi', toi); vaiToi = DM.nhanSu.find((n) => n.ma === toi)?.vai || []; $('.menu a[data-trang=moi]').hidden = !coTien(); dieuHuong(); };
   }
   $('.menu').hidden = false;
   DM = await kho.danhMuc();
   if (!kho.THAT) $('#toi').innerHTML = '<option value="">Đang dùng: —</option>' + DM.nhanSu.map((n) => `<option value="${n.ma}" ${n.ma === toi ? 'selected' : ''}>${esc(n.ten)}</option>`).join('');
+  if (!kho.THAT) vaiToi = DM.nhanSu.find((n) => n.ma === toi)?.vai || [];
+  $('.menu a[data-trang=moi]').hidden = !coTien();
   await dieuHuong();
 }
 

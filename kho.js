@@ -2,7 +2,7 @@
 // Hai đường chạy, cùng bộ hàm:
 //   · Supabase (bản thật) — khi cau-hinh.js có URL + khoá công khai. Phải đăng nhập; nhật ký ghi theo tài khoản.
 //   · PGlite (bản thử)    — khi cau-hinh.js để trống: Postgres chạy ngay trong trình duyệt, lưu IndexedDB.
-import { SUPABASE_URL, SUPABASE_KHOA_CONG_KHAI } from './cau-hinh.js?v=20261108a';
+import { SUPABASE_URL, SUPABASE_KHOA_CONG_KHAI } from './cau-hinh.js?v=20261108b';
 
 export const THAT = !!(SUPABASE_URL && SUPABASE_KHOA_CONG_KHAI) && !new URLSearchParams(location.search).has('thu');
 let db, sb;
