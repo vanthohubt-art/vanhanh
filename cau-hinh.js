@@ -5,3 +5,8 @@
 // TUYỆT ĐỐI không dán khoá secret / service_role vào đây.
 export const SUPABASE_URL = 'https://nqmvkurjggoaqiyaapes.supabase.co';
 export const SUPABASE_KHOA_CONG_KHAI = 'sb_publishable_3ofCbtu14E0NJ0tgqrcsxw_4peUxAfc';
+
+// Tài khoản NHẬN tiền in trên ảnh hoá đơn (mã VietQR) — anh Thọ gửi 09/11/2026 kèm ảnh QR của Techcombank.
+// Đây là thông tin đưa cho khách, không phải bí mật. Để trống stk thì hoá đơn không in mã QR.
+// BIN Napas: Techcombank 970407 · Vietcombank 970436 · MB 970422 · VietinBank 970415 · BIDV 970418 · ACB 970416.
+export const TAI_KHOAN_NHAN = { bin: '970407', nganHang: 'Techcombank', stk: '9961818905', chuTk: 'NGUYEN VAN THO' };

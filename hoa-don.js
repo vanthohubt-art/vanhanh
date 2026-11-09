@@ -2,6 +2,9 @@
 // Sale bấm "Ảnh hoá đơn" ở màn hình ca → xem trước → Chia sẻ (Zalo/Messenger trên điện thoại) hoặc Tải ảnh.
 // Chỉ in thứ khách nên thấy: gói, phát sinh, tiền đã thu, còn lại, hẹn trả ảnh. KHÔNG in ghi chú nội bộ, ekip, lịch sử.
 
+import { TAI_KHOAN_NHAN } from './cau-hinh.js?v=20261109b';
+import { chuoiVietQR, noiDungCK } from './vietqr.js?v=20261109b';
+
 const STUDIO = {
   ten: 'HOME STUDIO',
   phu: 'Chụp ảnh cho bé và gia đình',
@@ -80,6 +83,28 @@ export async function veHoaDon(h) {
     ke(y); y += 20;
     if (d.thua) dong('Tiền thừa (hoàn khách hoặc trừ vào in)', d.thua, { dam: true, co: 38, mau: MAU.xanh });
     else dong(d.conLai ? 'CÒN LẠI CẦN THANH TOÁN' : 'ĐÃ THANH TOÁN ĐỦ', d.conLai, { dam: true, co: 38, mau: d.conLai ? MAU.do : MAU.xanh });
+
+    // Mã VietQR: chỉ khi còn tiền phải thu, đã có số TK trong cau-hinh.js và thư viện vẽ QR (cdnjs) đã tải.
+    // Thiếu thư viện (mất mạng) thì vẫn in số TK bằng chữ — hoá đơn không bao giờ hỏng vì thiếu QR.
+    const tk = TAI_KHOAN_NHAN;
+    if (d.conLai > 0 && tk && tk.stk) {
+      const nd = noiDungCK(h.ma);
+      y += 30; ke(y); y += 60;
+      chu('Quét mã để chuyển khoản', W / 2, y, 32, true, MAU.chu, 'center'); y += 30;
+      if (typeof window.qrcode === 'function') {
+        const qr = window.qrcode(0, 'M'); qr.addData(chuoiVietQR({ bin: tk.bin, stk: tk.stk, soTien: d.conLai, noiDung: nd })); qr.make();
+        const n = qr.getModuleCount(), o = Math.floor(400 / (n + 8)), canh = o * (n + 8), x0 = (W - canh) / 2;
+        if (that) {
+          ctx.fillStyle = '#fff'; ctx.fillRect(x0, y, canh, canh); ctx.fillStyle = '#000';
+          for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (qr.isDark(r, k)) ctx.fillRect(x0 + (k + 4) * o, y + (r + 4) * o, o, o);
+        }
+        y += canh + 20;
+      }
+      y += 26; chu(`${tk.nganHang} · ${tk.stk.replace(/(\d{4})(?=\d)/g, '$1 ')}`, W / 2, y, 30, true, MAU.chu, 'center');
+      y += 42; chu(tk.chuTk, W / 2, y, 30, false, MAU.chu, 'center');
+      y += 42; chu(`Số tiền ${tien(d.conLai)} · Nội dung: ${nd}`, W / 2, y, 26, false, MAU.nhat, 'center');
+      y += 20;
+    }
 
     if (h.hen_tra_anh && h.trang_thai < 8) { y += 20; chu(`Hẹn trả ảnh: ${ngayDu(h.hen_tra_anh)}`, LE, y + 30, 30, true, MAU.chu); y += 60; }
     y += 40; chu('Cảm ơn gia đình đã tin chọn Home Studio!', W / 2, y, 30, false, MAU.nhan, 'center');

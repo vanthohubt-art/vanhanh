@@ -1,7 +1,7 @@
 // App vận hành Home Studio — bản thử giai đoạn 1 (hợp đồng · lịch · thu tiền).
 // Màn hình chỉ gọi kho.js. Bản thật (Supabase) bắt đăng nhập; bản thử chọn "đang dùng" ở góc trên.
-import * as kho from './kho.js?v=20261109a';
-import { moHoaDon } from './hoa-don.js?v=20261109a';
+import * as kho from './kho.js?v=20261109b';
+import { moHoaDon } from './hoa-don.js?v=20261109b';
 
 const $ = (s, g = document) => g.querySelector(s);
 const tien = (n) => (Math.round(Number(n) || 0)).toLocaleString('vi-VN') + 'đ';
