@@ -420,9 +420,10 @@ async function veAlbum(c, h, al, el, veLai) {
 // ═════════ PHẦN THÊM CỦA HỒ SƠ CA ═════════
 // Concept + makeup khách chọn · thông tin bé · video · checkout makeup · đánh giá.
 export async function veHoSoThem(c, h, chua) {
-  const t = await c.kho.ham('crm_ca_them', { p_id: h.id });
+  const t = await c.kho.ham('crm_ca_them', { p_id: h.id, p_ai: c.toi });
   const am = (loai) => t.anh_mau.filter((a) => a.loai === loai);
   const coMakeup = h.ekip.some((e) => e.vai === 'makeup') || c.vaiToi.includes('makeup');
+  const ghiNgoai = c.vaiToi.includes('chu') || c.vaiToi.includes('sale_online');
   chua.innerHTML = `
     <div class="the"><div class="dau-the"><h2>Concept & makeup khách chọn</h2><span class="phai"><button class="nut phu nho" data-chon="concept">Chọn concept</button> <button class="nut phu nho" data-chon="makeup">Chọn makeup</button></span></div>
       <div class="luoi-anh nho">${t.anh_mau.map((a) => `<figure class="o-anh"><img src="${c.esc(anhTrucTiep(a.anh_url))}" alt="" loading="lazy"><figcaption><b>${c.esc(a.ten)}</b><span class="mo nho">${a.loai}</span></figcaption></figure>`).join('') || '<div class="mo">Chưa chọn — sale gửi ảnh mẫu cho khách rồi ghi lại đây để ekip chuẩn bị.</div>'}</div></div>
@@ -436,6 +437,12 @@ export async function veHoSoThem(c, h, chua) {
       <div class="hai" style="margin-top:8px"><label>Thợ makeup<select id="mk-ns">${c.DM.nhanSu.filter((x) => x.vai.includes('makeup')).map((x) => `<option value="${x.id}" ${x.ma === c.toi ? 'selected' : ''}>${c.esc(x.ten)}</option>`).join('')}</select></label>
         <label>Người lớn<input id="mk-nl" type="number" min="0" value="0"></label><label>Trẻ em<input id="mk-te" type="number" min="0" value="0"></label></div>
       <div class="hang-nut" style="margin-top:8px"><button class="nut phu nho" id="mk-luu">Lưu checkout</button></div></div>` : ''}
+    ${ghiNgoai ? `<div class="the"><h2>Thợ make cộng tác</h2><div class="mo nho" style="margin-bottom:6px">Thợ ngoài anh Thọ gọi · người lớn 200.000đ · bé 100.000đ một mặt${ghiNgoai ? ' · sale online hoặc anh Thọ ghi' : ''}.</div>
+      ${t.make_ngoai.map((m) => `<div class="gd"><span><b style="font-weight:600">${c.esc(m.ten)}</b><br><span class="mo nho">${m.nguoi_lon} người lớn · ${m.tre_em} bé${m.nguoi_ghi ? ' · ' + c.esc(m.nguoi_ghi) + ' ghi' : ''}</span></span>
+        <b>${c.tien(m.tien)}${ghiNgoai ? ` <button class="nut phu nho" data-mn-sua="${m.id}">Sửa</button> <button class="nut phu nho" data-mn-xoa="${m.id}">Xoá</button>` : ''}</b></div>`).join('')}
+      ${ghiNgoai ? `<div class="hai" style="margin-top:8px"><label>Tên thợ make<input id="mn-ten" list="ds-tho-ngoai" placeholder="vd: Linh make"><datalist id="ds-tho-ngoai">${(t.ten_tho_ngoai || []).map((x) => `<option>${c.esc(x)}</option>`).join('')}</datalist></label>
+        <label>Người lớn<input id="mn-nl" type="number" min="0" value="0" inputmode="numeric"></label><label>Bé<input id="mn-te" type="number" min="0" value="0" inputmode="numeric"></label></div>
+      <div class="hang-nut" style="margin-top:8px"><button class="nut phu nho" id="mn-luu">+ Thêm thợ make</button></div>` : ''}</div>` : ''}
     <div class="the"><div class="dau-the"><h2>Đánh giá của khách</h2><span class="phai"><button class="nut phu nho" id="dg-moi">+ Ghi đánh giá</button></span></div>
       ${t.danh_gia.map((d) => `<div class="gd"><span>${d.nhan_xet ? '"' + c.esc(d.nhan_xet) + '"' : '<span class="mo">không ghi lời</span>'} ${d.van_de.map((v) => `<span class="nhan do">${VAN_DE[v] || v}</span>`).join(' ')}</span><b>${'★'.repeat(d.diem)} <span class="mo nho">${d.luc}</span></b></div>`).join('') || '<div class="mo">Chưa có.</div>'}</div>`;
   const veLai = () => veHoSoThem(c, h, chua);
@@ -464,6 +471,24 @@ export async function veHoSoThem(c, h, chua) {
     await c.kho.ham('crm_checkout_makeup', { p_hop_dong: h.id, p_nhan_su: Number(c.$('#mk-ns').value), p_nguoi_lon: Number(c.$('#mk-nl').value), p_tre_em: Number(c.$('#mk-te').value), p_ghi: null, p_ai: c.toi });
     c.bao('Đã lưu checkout'); veLai();
   });
+  // Thợ make cộng tác: thêm mới · sửa (nạp số vào ô, nút đổi thành "Lưu sửa") · xoá.
+  let suaId = null;
+  const mnLuu = chua.querySelector('#mn-luu');
+  if (mnLuu) mnLuu.onclick = () => c.chay(async () => {
+    await c.kho.ham('crm_luu_make_ngoai', { p_hop_dong: h.id, p_ten: c.$('#mn-ten').value, p_nguoi_lon: Number(c.$('#mn-nl').value) || 0,
+      p_tre_em: Number(c.$('#mn-te').value) || 0, p_id: suaId, p_ghi: null, p_ai: c.toi });
+    c.bao(suaId ? 'Đã sửa' : 'Đã thêm thợ make'); veLai();
+  });
+  chua.querySelectorAll('[data-mn-sua]').forEach((b) => (b.onclick = () => {
+    const m = t.make_ngoai.find((x) => x.id === Number(b.dataset.mnSua));
+    suaId = m.id; c.$('#mn-ten').value = m.ten; c.$('#mn-nl').value = m.nguoi_lon; c.$('#mn-te').value = m.tre_em;
+    mnLuu.textContent = 'Lưu sửa'; c.$('#mn-ten').focus();
+  }));
+  chua.querySelectorAll('[data-mn-xoa]').forEach((b) => (b.onclick = () => c.chay(async () => {
+    if (!confirm('Xoá dòng thợ make này?')) return;
+    await c.kho.ham('crm_xoa_make_ngoai', { p_id: Number(b.dataset.mnXoa), p_ai: c.toi });
+    c.bao('Đã xoá'); veLai();
+  })));
 }
 
 // ═════════ LƯƠNG & HOA HỒNG (011, 09/11/2026) ═════════
@@ -472,7 +497,13 @@ export async function veHoSoThem(c, h, chua) {
 const TEN_VAI = { sale_online: 'Sale online · giá gói', sale_offline: 'Sale tại studio · phát sinh', chup: 'Chụp · tổng hoá đơn', pts: 'PTS · tổng hoá đơn', stylist: 'Stylist · tổng hoá đơn' };
 export async function trangHoaHong(c, thang = c.homNay().slice(0, 7)) {
   const r = await c.kho.ham('crm_hoa_hong', { p_thang: thang + '-01', p_ai: c.toi });
-  const pt = (x) => (Number(x) * 100).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + '%';
+  const mn = await c.kho.ham('crm_make_ngoai_thang', { p_thang: thang + '-01', p_ai: c.toi });   // null với người không phải chủ/sale
+  const theNgoai = !mn ? '' : `<div class="the"><div class="dau-the"><h2>Thợ make cộng tác — phải trả ${c.tien(mn.tong_tien)}</h2></div>
+      <div class="mo nho" style="margin-bottom:6px">Tổng số mặt tháng này: <b>${Number(mn.mat.ngoai_lon) + Number(mn.mat.trong_lon)} người lớn · ${Number(mn.mat.ngoai_be) + Number(mn.mat.trong_be)} bé</b>
+        (thợ ngoài ${mn.mat.ngoai_lon} + ${mn.mat.ngoai_be} · thợ nhà ${mn.mat.trong_lon} + ${mn.mat.trong_be}). Không cộng vào tổng hoa hồng.</div>
+      ${mn.theo_tho.map((x) => `<div class="gd"><span><b style="font-weight:600">${c.esc(x.ten)}</b><br><span class="mo nho">${x.so_ca} ca · ${x.lon} người lớn · ${x.be} bé</span></span><b>${c.tien(x.tien)}</b></div>`).join('') || '<div class="mo">Chưa ghi thợ ngoài nào — ghi ở hồ sơ từng ca, thẻ "Thợ make cộng tác".</div>'}
+      ${mn.ds.length ? `<details style="margin-top:8px"><summary class="mo nho">Từng ca (${mn.ds.length})</summary><div class="cuon-doc" style="max-height:260px">${mn.ds.map((x) => `<a class="gd" href="#/ca/${x.hop_dong_id}" style="text-decoration:none"><span>${c.ngayVN(x.ngay)} · ${c.esc(x.khach)}<br><span class="mo nho">${c.esc(x.ten)}</span></span><b>${x.lon}+${x.be} · ${c.tien(x.tien)}</b></a>`).join('')}</div></details>` : ''}</div>`;
+  const pt =(x) => (Number(x) * 100).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + '%';
   c.trang.innerHTML = c.dauTrang('Thu chi', 'Lương & hoa hồng', r.la_chu
     ? `Hoa hồng tự tính từ ekip từng ca có ngày chụp trong tháng. Lương cứng, chấm công, thưởng, tăng ca vẫn ở app lương.`
     : `Hoa hồng của bạn trong tháng, tính từ các ca có tên bạn trong ekip. Thấy thiếu ca nào thì báo sale sửa ekip.`, navThang('#/hoa-hong', thang)) + `
@@ -488,6 +519,7 @@ export async function trangHoaHong(c, thang = c.homNay().slice(0, 7)) {
       <table>${x.vai.map((v) => `<tr><td>${TEN_VAI[v.vai] || v.vai}<br><span class="mo nho">${v.so_ca} ca · ${c.tien(v.mau)} × ${pt(v.ti_le)}</span></td><td class="so">${c.tien(v.tien)}</td></tr>`).join('')}
         ${x.make ? `<tr><td>Makeup<br><span class="mo nho">${x.make.lon} người lớn · ${x.make.be} trẻ em · ${x.make.so_ca} ca</span></td><td class="so">${x.make.tien == null ? '<span class="mo">chưa có đơn giá</span>' : c.tien(x.make.tien)}</td></tr>` : ''}</table>
     </div>`).join('') || '<div class="trong">Chưa có ca nào có tên trong ekip tháng này.</div>'}</div>
+    ${theNgoai}
     ${r.la_chu && (r.thieu || []).length ? `<div class="the"><h2>Ca thiếu dữ liệu — hoa hồng có thể bị sót</h2><div class="mo nho" style="margin-bottom:6px">Ô trống có thể là anh tự làm (không tính) — chỉ cần soát cho chắc.</div>
       <div class="cuon-doc" style="max-height:320px">${r.thieu.map((t) => `<a class="gd" href="#/ca/${t.id}" style="text-decoration:none"><span>${c.ngayVN(t.ngay)} · ${t.ma}</span><span class="mo nho">${c.esc(t.ly_do)}</span></a>`).join('')}</div></div>` : ''}
     ${r.la_chu ? `<div class="the mo">Tỉ lệ đang dùng: ${Object.entries(r.ti_le || {}).map(([k, v]) => `${(TEN_VAI[k] || k).split(' · ')[0]} ${pt(v)}`).join(' · ')} · Mai stylist 2,5% · nhiều người cùng vai trong một ca ⇒ mỗi người 1/N (anh chốt 06/11). Đổi tỉ lệ thì nhắn trợ lý.</div>` : ''}`;
