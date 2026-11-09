@@ -538,3 +538,43 @@ export async function trangHoaHong(c, thang = c.homNay().slice(0, 7)) {
       <div class="cuon-doc" style="max-height:320px">${r.thieu.map((t) => `<a class="gd" href="#/ca/${t.id}" style="text-decoration:none"><span>${c.ngayVN(t.ngay)} · ${t.ma}</span><span class="mo nho">${c.esc(t.ly_do)}</span></a>`).join('')}</div></div>` : ''}
     ${r.la_chu ? `<div class="the mo">Tỉ lệ đang dùng: ${Object.entries(r.ti_le || {}).map(([k, v]) => `${(TEN_VAI[k] || k).split(' · ')[0]} ${pt(v)}`).join(' · ')} · Mai stylist 2,5% · nhiều người cùng vai trong một ca ⇒ mỗi người 1/N (anh chốt 06/11). Đổi tỉ lệ thì nhắn trợ lý.</div>` : ''}`;
 }
+
+// ═════════ VIỆC CỦA TÔI — chế độ xem nhân viên (015, 09/11/2026) ═════════
+// Nhân viên mở app vào thẳng đây. Chủ xem được qua nút "Việc của tôi" ở Trang chủ.
+// Việc = ca có tên mình đang dừng ở KHÂU CỦA VAI mình (trang_thai.vai_chiu) — máy chủ lọc, không phải ẩn.
+const TEN_VAI_TOI = { chup: 'Chụp', pts: 'PTS', stylist: 'Stylist', makeup: 'Makeup', sale_offline: 'Sale tại studio', sale_online: 'Sale online', chu: 'Duyệt' };
+const VIEC_CUA_VAI = { chup: 'Gửi ảnh gốc cho khách', pts: 'Chỉnh ảnh', sale_online: 'Chốt lịch · nhắc chọn ảnh · giao ảnh', chu: 'Duyệt ảnh trước khi giao' };
+export async function trangCuaToi(c) {
+  const [v, hh] = await Promise.all([
+    c.kho.ham('crm_viec_cua_toi', { p_ai: c.toi }),
+    c.kho.ham('crm_hoa_hong', { p_thang: c.homNay().slice(0, 8) + '01', p_ai: c.toi }).catch(() => null),
+  ]);
+  const toi = v.toi || { ten: c.toi, vai: c.vaiToi };
+  const minh = hh && hh.nguoi ? hh.nguoi.find((x) => x.ma === toi.ma) : null;
+  const gap = v.viec.filter((x) => x.gap).length;
+  const theoKhau = {};
+  for (const x of v.viec) (theoKhau[x.vai_chiu] ||= []).push(x);
+  const homNay = v.ca_sap.filter((x) => x.ngay === v.hom_nay), sapToi = v.ca_sap.filter((x) => x.ngay !== v.hom_nay);
+  const dongCa = (x) => `<a class="dong-ca" href="#/ca/${x.id}"><span class="gio">${x.ngay === v.hom_nay ? (x.gio || '--:--') : c.THU[new Date(x.ngay + 'T12:00:00').getDay()] + ' ' + c.ngayVN(x.ngay)}</span>
+      <span><span class="ten">${c.esc(x.khach)}</span><br><span class="phu">${c.esc(x.goi)} · bạn: <b>${x.vai.map((k) => TEN_VAI_TOI[k] || k).join(', ')}</b>${x.ekip.length ? ' · ' + x.ekip.map((e) => c.esc(e.ten)).join(', ') : ''}</span></span>
+      <span style="text-align:right">${x.ngay !== v.hom_nay && x.gio ? `<span class="phu">${x.gio}</span>` : ''}</span></a>`;
+  c.trang.innerHTML = c.dauTrang(`Việc của tôi · ${c.esc(toi.ten)}`, gap ? `${gap} việc cần làm ngay` : v.viec.length ? `${v.viec.length} việc đang chờ bạn` : 'Không có việc nào đang chờ bạn ✓',
+    'Chỉ những ca có tên bạn và đang dừng ở khâu của bạn. Thấy thiếu ca nào thì báo sale sửa ekip.',
+    c.laChu() ? '<a class="nut phu" href="#/">Xem cả studio</a>' : '') + `
+    <div class="so-lieu bon">
+      ${c.theSo('#/toi', 'canh', ['var(--do-nhat)', 'var(--do)'], 'Việc gấp', gap, 'trễ hẹn hoặc khách đòi sửa')}
+      ${c.theSo('#/toi', 'ca', ['var(--nhan-nhat)', 'var(--nhan-dam)'], 'Việc đang chờ bạn', v.viec.length, Object.keys(theoKhau).map((k) => TEN_VAI_TOI[k] || k).join(' · ') || '—')}
+      ${c.theSo('#/lich', 'lich', ['var(--tt8n)', 'var(--tt8c)'], 'Ca của bạn tháng này', v.thang.so, v.thang.xong + ' ca đã hoàn thành')}
+      ${c.theSo('#/hoa-hong', 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Hoa hồng tạm tính', minh ? (minh.nhan_hoa_hong ? c.tien(minh.tong) : 'lương cố định') : '—', 'tháng này, theo ekip từng ca')}
+    </div>
+    <div class="hai-cot">
+      <div class="the"><div class="dau-the"><div><div class="nhan-nho mo" style="font-weight:700;color:var(--nhan);font-size:11px">CA CỦA BẠN</div><h2>Hôm nay ${homNay.length} ca · 7 ngày tới ${sapToi.length} ca</h2></div><a class="phai mo" href="#/lich">Lịch cả studio ›</a></div>
+        ${homNay.map(dongCa).join('') || '<div class="trong">Hôm nay bạn không có ca chụp.</div>'}
+        ${sapToi.length ? `<div class="nhan-nho mo" style="margin:12px 0 4px;font-weight:700">SẮP TỚI</div>${sapToi.map(dongCa).join('')}` : ''}
+      </div>
+      <div>${Object.keys(theoKhau).length ? Object.entries(theoKhau).map(([k, ds]) => `<div class="bo-phan"><div class="dau-bp"><div><b>${TEN_VAI_TOI[k] || k}</b><div class="mo nho">${VIEC_CUA_VAI[k] || ''}</div></div><span class="tong-bp">${ds.length}</span></div>
+          <div class="nhom-viec">${ds.slice(0, 30).map((x) => `<a class="viec ${x.gap ? 'gap' : ''}" href="#/ca/${x.id}"><span class="ten">${c.esc(x.khach)}</span><span class="mo nho">${c.esc(x.goi)} · ${c.esc(x.tt_ten)}</span><span class="ly-do">${c.esc(x.ly_do)}</span></a>`).join('')}
+          ${ds.length > 30 ? `<div class="con-nua">… và ${ds.length - 30} việc nữa</div>` : ''}</div></div>`).join('')
+        : '<div class="the"><div class="trong">Không có ca nào đang chờ khâu của bạn ✓</div></div>'}</div>
+    </div>`;
+}

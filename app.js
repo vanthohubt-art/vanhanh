@@ -2,9 +2,9 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261109k';
+import * as kho from './kho.js?v=20261109l';
 import { moHoaDon } from './hoa-don.js?v=20261109i';
-import * as mr from './mo-rong.js?v=20261109k';
+import * as mr from './mo-rong.js?v=20261109l';
 
 const $ = (s, g = document) => g.querySelector(s);
 const tien = (n) => (Math.round(Number(n) || 0)).toLocaleString('vi-VN') + 'đ';
@@ -53,8 +53,9 @@ const ic = (k) => `<svg viewBox="0 0 24 24">${ICON[k] || ''}</svg>`;
 // 09/11 (lần 2): anh Thọ muốn ĐỦ menu như Sky ⇒ mỗi mục đều có màn hình thật (008-mo-rong.sql + mo-rong.js).
 const MENU = [
   { tt: '', ten: 'Trang chủ', ic: 'nha' },
+  { tt: 'toi', ten: 'Việc của tôi', ic: 'ca' },
   { tt: 'tim', ten: 'Tìm khách', ic: 'tim' },
-  { tt: 'ke-hoach', ten: 'Kế hoạch tháng', ic: 'dich' },
+  { tt: 'ke-hoach', ten: 'Kế hoạch tháng', ic: 'dich', tien: true },
   { nhom: 'Bán hàng' },
   { tt: 'lead', ten: 'Khách tiềm năng', ic: 'them' },
   { tt: 'moi', ten: 'Lên hợp đồng', ic: 'hd', tien: true },
@@ -70,8 +71,8 @@ const MENU = [
   { tt: 'cskh', ten: 'Chăm sóc khách', ic: 'tim2' },
   { tt: 'chat-luong', ten: 'Chất lượng dịch vụ', ic: 'sao' },
   { nhom: 'Thu chi' },
-  { tt: 'cong-no', ten: 'Công nợ & thu tiền', ic: 'vi' },
-  { tt: 'chi', ten: 'Chi cửa hàng', ic: 'tui' },
+  { tt: 'cong-no', ten: 'Công nợ & thu tiền', ic: 'vi', tien: true },
+  { tt: 'chi', ten: 'Chi cửa hàng', ic: 'tui', tien: true },
   { tt: 'hoa-hong', ten: 'Lương & hoa hồng', ic: 'tien' },
   { nhom: 'Marketing' },
   { tt: 'dang-bai', ten: 'Đăng bài Facebook', ic: 'gui' },
@@ -113,7 +114,7 @@ async function trangChu() {
   const theoBP = {};
   for (const v of tc.viec) (theoBP[v.bo_phan] ||= []).push(v);
   $('#trang').innerHTML = dauTrang(`Trung tâm điều hành · ${THU_DAI[thuCua(tc.hom_nay)]}, ${ngayVN(tc.hom_nay)}/${tc.hom_nay.slice(0, 4)}`, `Tổng quan tháng ${thang}`,
-    'Một màn hình để cả đội biết hôm nay cần làm gì.', coTien() ? `<a class="nut" href="#/moi">${ic('hd')} Lên hợp đồng</a>` : '') + `
+    'Một màn hình để cả đội biết hôm nay cần làm gì.', (coTien() ? `<a class="nut" href="#/moi">${ic('hd')} Lên hợp đồng</a> ` : '') + '<a class="nut phu" href="#/toi">Việc của tôi</a>') + `
     <div class="so-lieu">
       ${theSo('#/tim', 'hd', ['var(--tt6n)', 'var(--tt6c)'], 'Hợp đồng mới trong tháng', tc.hd_moi.so, trieu(tc.hd_moi.tien))}
       ${theSo('#/cong-no', 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Thực thu trong tháng', trieu(tc.thuc_thu.tien), tc.thuc_thu.so + ' phiếu thu')}
@@ -152,7 +153,7 @@ async function trangChu() {
 
 function veDaiGap(tc) {
   const d = $('#dai-gap');
-  if (!tc || !tc.gap) { d.hidden = true; return; }
+  if (!tc || !tc.gap || !coTien()) { d.hidden = true; return; }
   const dem = (k) => tc.viec.find((v) => v.nhom === k)?.so || 0;
   d.innerHTML = `<b>${tc.gap} việc cần xử lý ngay</b>${dem('qua_hen') ? `<span>${dem('qua_hen')} ca quá hẹn trả ảnh</span>` : ''}${dem('thieu_tho') ? `<span>${dem('thieu_tho')} ca sắp chụp chưa xếp thợ</span>` : ''}${dem('sap_chup_chua_coc') ? `<span>${dem('sap_chup_chua_coc')} ca sắp chụp chưa thu cọc</span>` : ''}<span class="xem">Xem ›</span>`;
   d.hidden = false;
@@ -633,8 +634,10 @@ async function dieuHuong() {
     else if (p0 === 'chi') await mr.trangChi(ctx(), p1 || undefined);
     else if (p0 === 'dang-bai') await mr.trangDangBai(ctx());
     else if (p0 === 'hoa-hong') await mr.trangHoaHong(ctx(), p1 || undefined);
+    else if (p0 === 'toi' || (!p0 && !coTien())) await mr.trangCuaToi(ctx());
     else await trangChu();
   });
+  if (!coTien()) $('#dai-gap').hidden = true;   // việc gấp cả studio chỉ cho sale online / chủ
   if (p0 && !tcNho) lamMoiDaiGap();
   const dem = $('#dem-gap'); if (dem && tcNho) { dem.textContent = tcNho.gap; dem.hidden = !tcNho.gap; }
 }
