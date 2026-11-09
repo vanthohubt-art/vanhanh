@@ -196,7 +196,8 @@ export async function trangAnhMau(c, loai) {
 // ═════════ HẠN GIAO ẢNH ═════════
 export async function trangHanGiao(c) {
   const tu = c.homNay(), den = c.congNgay(tu, 13);
-  const r = await c.kho.ham('crm_han_giao', { p_tu: tu, p_den: den });
+  const datHen = c.coTien();   // chủ / sale online — hẹn trả ảnh là lời hứa với khách
+  const [r, thieu] = await Promise.all([c.kho.ham('crm_han_giao', { p_tu: tu, p_den: den }), datHen ? c.kho.ham('crm_thieu_hen', {}) : []]);
   const tre = r.ca.filter((x) => x.con_ngay < 0 && x.trang_thai < 8);
   const dh = r.dung_han;
   c.trang.innerHTML = c.dauTrang('Chụp & hậu kỳ', 'Hạn giao ảnh', 'Lịch hẹn trả ảnh 14 ngày tới và các ca đã quá hẹn. Chuyển ca sang "8. Hoàn thành" là máy ghi ngày trả thật để đo đúng hạn.') + `
@@ -206,6 +207,13 @@ export async function trangHanGiao(c) {
       ${c.theSo('#/chat-luong', 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Trả đúng hạn (60 ngày)', dh.so ? Math.round((100 * dh.dung) / dh.so) + '%' : '—', dh.so ? `${dh.dung}/${dh.so} ca` : 'đo từ 09/11/2026 — chưa có ca trả')}
       ${c.theSo('#/chat-luong', 'may', ['var(--tt8n)', 'var(--tt8c)'], 'Chụp → trả ảnh trung bình', dh.tb_ngay != null ? dh.tb_ngay + ' ngày' : '—', 'cam kết 7–10 ngày')}
     </div>
+    ${thieu.length ? `<div class="the" style="border-color:var(--vang, #C98A00)" id="thieu-hen">
+      <div class="dau-the"><h2>Chưa có hẹn trả ảnh · ${thieu.length} ca</h2><span class="phai"><button class="nut nho" id="th-luu">Lưu các ô đã điền</button></span></div>
+      <p class="mo" style="margin:0 0 10px">Ca đang hậu kỳ (chụp trong 45 ngày) mà chưa có ngày hẹn — máy không đo được trễ hạn. Điền ngày đã hứa với khách; chưa rõ thì bấm <b>gợi ý</b> (ngày chụp + số ngày trả ảnh của gói) rồi sửa nếu cần. Ô để trống thì bỏ qua.</p>
+      <div style="overflow-x:auto"><table><tr><th>Khách</th><th>Gói</th><th>Chụp</th><th>Đang ở</th><th>Hẹn trả ảnh</th></tr>
+      ${thieu.map((x) => `<tr><td><a href="#/ca/${x.id}">${c.esc(x.khach)}</a></td><td>${c.esc(x.goi)}</td><td>${c.ngayVN(x.ngay_chup)}</td><td class="mo">${c.esc(x.trang_thai_ten)}</td>
+        <td style="white-space:nowrap"><input type="date" data-hen="${x.id}" style="width:auto"> <a href="#" class="mo" data-goiy="${x.id}" data-ngay="${x.goi_y}">gợi ý ${c.ngayVN(x.goi_y)}</a></td></tr>`).join('')}
+      </table></div></div>` : ''}
     ${tre.length ? `<div class="the" style="border-color:var(--do)"><h2 style="color:var(--do)">Quá hẹn</h2><div class="luoi-ca">${tre.map((x) => c.theCa({ ...x, tong_hoa_don: null }, `<div><span class="nhan do">trễ ${-x.con_ngay} ngày</span></div>`)).join('')}</div></div>` : ''}
     ${[...Array(14).keys()].map((i) => {
       const d = c.congNgay(tu, i), ds = r.ca.filter((x) => x.hen_tra_anh === d);
@@ -213,6 +221,17 @@ export async function trangHanGiao(c) {
       return `<div class="the"><div class="dau-the"><h2>${c.THU[new Date(d + 'T12:00:00Z').getUTCDay()]} ${c.ngayVN(d)}${i === 0 ? ' · hôm nay' : ''}</h2><span class="phai mo">${ds.length} ca</span></div>
         <div class="luoi-ca">${ds.map((x) => c.theCa({ ...x, tong_hoa_don: null }, x.tra_that ? `<div><span class="nhan xanh">đã trả ${c.ngayVN(x.tra_that)}</span></div>` : '')).join('')}</div></div>`;
     }).join('') || (tre.length ? '' : '<div class="trong">14 ngày tới chưa có ca nào hẹn trả ảnh.</div>')}`;
+  if (thieu.length) {
+    c.trang.querySelectorAll('[data-goiy]').forEach((a) => (a.onclick = (e) => {
+      e.preventDefault(); c.trang.querySelector(`[data-hen="${a.dataset.goiy}"]`).value = a.dataset.ngay;
+    }));
+    c.$('#th-luu').onclick = () => c.chay(async () => {
+      const ds = [...c.trang.querySelectorAll('[data-hen]')].filter((i) => i.value).map((i) => ({ id: Number(i.dataset.hen), hen: i.value }));
+      if (!ds.length) { c.bao('Chưa điền ô nào', true); return; }
+      const n = await c.kho.ham('crm_dat_hen', { p_ds: ds, p_ai: c.toi });
+      c.bao('Đã lưu hẹn cho ' + n + ' ca'); trangHanGiao(c);
+    });
+  }
 }
 
 // ═════════ VIDEO KHÁCH ═════════
