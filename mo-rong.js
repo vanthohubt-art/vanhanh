@@ -12,7 +12,19 @@ const VAN_DE = { chup_lau: 'Chụp lâu', anh_xau: 'Ảnh chưa đẹp', tra_tre
 const CSKH = { nhac_chon_anh: ['Nhắc khách chọn ảnh', 'Đã gửi ảnh gốc mà khách chưa chọn'], xin_danh_gia: ['Xin đánh giá sau chụp', 'Trả ảnh 2–14 ngày, chưa có đánh giá'],
   sinh_nhat: ['Sinh nhật bé sắp tới', 'Mời chụp sinh nhật — trong 30 ngày tới'], ky_niem: ['Tròn 1 năm từ lần chụp', 'Mời chụp kỷ niệm — chưa đặt ca mới'] };
 const TT_BAI = { nhap: ['Nháp', 'tt1'], cho_duyet: ['Chờ anh Thọ duyệt', 'tt3'], da_duyet: ['Đã duyệt — chờ đăng', 'tt4'], da_dang: ['Đã đăng', 'tt2'], huy: ['Huỷ', 'tt5'] };
-const FANPAGE = ['Home Studio', 'Home Studio – Chụp ảnh cho bé', 'Home Studio – Gia đình', 'Home Studio – Newborn', 'Home Studio – Kỷ yếu', 'Home Studio – Cưới'];
+// Tên Page THẬT ở bảng Lark 14.1 (đọc 09/11/2026) — máy đăng tra token theo tên này. Nhiều Page: cách nhau dấu phẩy.
+const FANPAGE = ['Home Studio - Chụp ảnh cho bé và gia đình', 'Home Studio - Ảnh viện gia đình và bé yêu', 'Homestudio - Chụp ảnh thẻ', 'Homestudio - Phóng sự cưới & Event film', 'TayTo Studio', 'TayTo Studio - Chụp ảnh kỷ yếu đẹp chất Hà Nội'];
+// Ô ảnh/video: mỗi dòng một nguồn (link http/Drive, hoặc đường dẫn trên máy studio).
+const dsNguon = (u) => String(u || '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+function xemTruoc(c, u) {
+  const n = dsNguon(u);
+  if (!n.length) return '<div class="mo nho">⚠️ chưa có ảnh/video</div>';
+  const d = n[0], laVideo = /\.(mp4|mov|m4v|webm)(\?|$)/i.test(d);
+  const dau = /^https?:/i.test(d) && !laVideo
+    ? `<img src="${c.esc(anhTrucTiep(d))}" alt="" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px">`
+    : `<div class="mo nho">${laVideo ? '🎬' : '📁'} ${c.esc(d.split(/[\\/]/).pop())}</div>`;
+  return dau + (n.length > 1 ? `<div class="mo nho">+ ${n.length - 1} file nữa</div>` : '');
+}
 
 const n = (v) => Number(v) || 0;
 const thangCong = (t, k) => { const d = new Date(t + '-15T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + k); return d.toISOString().slice(0, 7); };
@@ -343,28 +355,30 @@ export async function trangChi(c, thang = c.homNay().slice(0, 7)) {
 // ═════════ ĐĂNG BÀI FACEBOOK ═════════
 export async function trangDangBai(c) {
   const ds = await c.kho.ham('crm_bai_dang', {});
-  c.trang.innerHTML = c.dauTrang('Marketing', 'Đăng bài Facebook', 'Soạn bài, xếp lịch, anh Thọ duyệt. App KHÔNG tự đăng — bấm đăng thật vẫn là anh Thọ (luật bộ não mục 6).',
+  c.trang.innerHTML = c.dauTrang('Marketing', 'Đăng bài Facebook', 'Soạn bài, xếp lịch, anh Thọ duyệt. App KHÔNG tự đăng: anh Thọ chạy DANG-BAI.ps1 -Crm -That trên máy studio, máy đăng mọi bài "Đã duyệt" tới giờ rồi ghi link về đây.',
     `<button class="nut" id="bd-moi">+ Soạn bài</button>`) + `
     <div class="the" style="padding:12px 14px">${Object.entries(TT_BAI).map(([k, [t]]) => `<span class="chip">${t} <span class="so">${ds.filter((b) => b.trang_thai === k).length}</span></span>`).join('')}</div>
     <div class="luoi-ca">${ds.map((b) => `<div class="the-ca" style="border-left-color:var(--${TT_BAI[b.trang_thai][1]}c)">
       <div class="hang"><span class="nhan ${TT_BAI[b.trang_thai][1]}">${TT_BAI[b.trang_thai][0]}</span><span class="mo nho" style="margin-left:auto">${c.esc(b.trang || '')}</span></div>
-      ${b.anh_url ? `<img src="${c.esc(anhTrucTiep(b.anh_url))}" alt="" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px">` : ''}
+      ${xemTruoc(c, b.anh_url)}
       <div style="white-space:pre-wrap;font-size:13.5px;max-height:120px;overflow:hidden">${c.esc(b.noi_dung)}</div>
       <div class="phu">${b.lich_dang ? 'Lịch đăng ' + c.ngayVN(b.lich_dang.slice(0, 10)) + ' ' + b.lich_dang.slice(11) : 'Chưa xếp lịch'} · ${c.esc(b.ai)}${b.hop_dong_ma ? ' · ' + b.hop_dong_ma : ''}</div>
       ${b.link_bai ? `<a class="phu" href="${c.esc(b.link_bai)}" target="_blank" rel="noopener">Mở bài đã đăng</a>` : ''}
+      ${b.dang_log ? `<details><summary class="mo nho">Máy đăng ${c.esc(b.dang_luc || '')}${/✖/.test(b.dang_log.split('---').pop()) ? ' · <b style="color:var(--do)">còn lỗi</b>' : ''}</summary><div class="mo nho" style="white-space:pre-wrap">${c.esc(b.dang_log)}</div></details>` : ''}
       <div class="hang-nut"><button class="nut phu nho" data-bd="${b.id}">Sửa</button></div></div>`).join('') || '<div class="trong">Chưa có bài nào. Bấm "+ Soạn bài".</div>'}</div>`;
   const moBai = (b = {}) => {
     const h = hop(c, b.id ? 'Sửa bài' : 'Soạn bài', `
-      <div class="hai"><label>Fanpage<input id="bd-trang" list="ds-trang" value="${c.esc(b.trang || 'Home Studio')}"><datalist id="ds-trang">${FANPAGE.map((f) => `<option>${f}</option>`).join('')}</datalist></label>
+      <div class="hai"><label>Fanpage (nhiều Page: cách dấu phẩy)<input id="bd-trang" list="ds-trang" value="${c.esc(b.trang || FANPAGE[0])}"><datalist id="ds-trang">${FANPAGE.map((f) => `<option>${f}</option>`).join('')}</datalist></label>
         <label>Lịch đăng<input id="bd-lich" type="datetime-local" value="${b.lich_dang || ''}"></label></div>
       <label style="margin-top:10px">Nội dung *<textarea id="bd-nd" rows="8" placeholder="Tiêu đề emoji chữ hoa · 📸/👉 · chân bài địa chỉ/hotline/inbox + hashtag">${c.esc(b.noi_dung || '')}</textarea></label>
-      <label style="margin-top:10px">Link ảnh<input id="bd-anh" value="${c.esc(b.anh_url || '')}"></label>
+      <label style="margin-top:10px">Ảnh / video — mỗi dòng một file<textarea id="bd-anh" rows="3" placeholder="D:\\Video\\2-Video Hoàn Thiện\\ten-video.mp4&#10;https://drive.google.com/file/d/… (Drive để 'Bất kỳ ai có đường liên kết')">${c.esc(b.anh_url || '')}</textarea></label>
+      <div class="mo nho" style="margin-top:4px">Có video ⇒ đăng Reel (video đầu tiên). Chỉ ảnh ⇒ bài nhiều ảnh. Đường dẫn D:\\… là file trên máy studio.</div>
       <label style="margin-top:10px">Trạng thái<select id="bd-tt">${Object.entries(TT_BAI).filter(([k]) => c.laChu() || k !== 'da_duyet').map(([k, [t]]) => `<option value="${k}" ${k === (b.trang_thai || 'nhap') ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
       <label style="margin-top:10px">Link bài sau khi đăng<input id="bd-link" value="${c.esc(b.link_bai || '')}"></label>
       <div class="hang-nut" style="margin-top:12px"><button class="nut" id="bd-luu">Lưu</button></div>`);
     h.g.querySelector('#bd-luu').onclick = () => c.chay(async () => {
       await c.kho.ham('crm_luu_bai', { d: { id: b.id || null, trang: giaTri(h.g, '#bd-trang'), lich_dang: giaTri(h.g, '#bd-lich'), noi_dung: h.g.querySelector('#bd-nd').value,
-        anh_url: giaTri(h.g, '#bd-anh'), trang_thai: giaTri(h.g, '#bd-tt'), link_bai: giaTri(h.g, '#bd-link') }, p_ai: c.toi });
+        anh_url: h.g.querySelector('#bd-anh').value.trim(), trang_thai: giaTri(h.g, '#bd-tt'), link_bai: giaTri(h.g, '#bd-link') }, p_ai: c.toi });
       h.dong(); c.bao('Đã lưu'); trangDangBai(c);
     });
   };
