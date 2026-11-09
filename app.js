@@ -2,9 +2,9 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261109l';
-import { moHoaDon } from './hoa-don.js?v=20261109i';
-import * as mr from './mo-rong.js?v=20261109l';
+import * as kho from './kho.js?v=20261109m';
+import { moHoaDon, moQrThu } from './hoa-don.js?v=20261109m';
+import * as mr from './mo-rong.js?v=20261109m';
 
 const $ = (s, g = document) => g.querySelector(s);
 const tien = (n) => (Math.round(Number(n) || 0)).toLocaleString('vi-VN') + 'đ';
@@ -350,7 +350,8 @@ async function trangCa(id) {
             <label>Hình thức<select id="pt-ht"><option value="chuyen_khoan">Chuyển khoản</option><option value="tien_mat">Tiền mặt</option></select></label>
           </div>
           <label style="margin-top:10px">Ghi chú<input id="pt-ghi" placeholder="Thu nốt sau buổi chụp…"></label>
-          <div class="hang-nut" style="margin-top:10px"><button class="nut nho" id="pt-thu">Ghi phiếu thu</button></div>
+          <div class="hang-nut" style="margin-top:10px"><button class="nut phu nho" id="pt-qr" title="Ảnh mã QR đúng số tiền ô trên, gửi khách chuyển khoản">Mã QR số tiền này</button><button class="nut nho" id="pt-thu">Ghi phiếu thu</button></div>
+          <p class="mo" style="margin:8px 0 0">Xin cọc: gõ số tiền cọc → <b>Mã QR số tiền này</b> → gửi khách. Khách quét là tự điền số tiền + mã HĐ. Tiền về thì bấm Ghi phiếu thu.</p>
         </div>
         <div class="the">
           <h2>Thêm phát sinh</h2>
@@ -384,6 +385,7 @@ async function trangCa(id) {
   });
   if (coTien()) {
     $('#anh-hd').onclick = () => chay(() => moHoaDon(h));
+    $('#pt-qr').onclick = () => chay(() => moQrThu(h, Number($('#pt-tien').value)));
     const veCl = () => {
       const ds = DM.giaIn.filter((g) => g.co === $('#ps-co').value);
       $('#ps-cl').innerHTML = ds.map((g) => `<option value="${g.chat_lieu}" data-gia="${g.gia}">${esc(g.chat_lieu_ten)} — ${tien(g.gia)}</option>`).join('');

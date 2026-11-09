@@ -117,19 +117,58 @@ export async function veHoaDon(h) {
   return c;
 }
 
+/** Ảnh mã QR chuyển khoản cho MỘT số tiền bất kỳ (cọc, thu nốt, tiền in) — sale gửi khách trước khi có hoá đơn đủ. */
+export async function veQrThu(h, soTien) {
+  const tk = TAI_KHOAN_NHAN;
+  if (!tk || !tk.stk) throw new Error('Chưa có số tài khoản nhận tiền trong cau-hinh.js');
+  if (!(soTien > 0)) throw new Error('Nhập số tiền cần thu trước (lớn hơn 0)');
+  if (typeof window.qrcode !== 'function') throw new Error('Chưa tải được thư viện vẽ mã QR — kiểm tra mạng rồi tải lại trang');
+  try { await document.fonts.load(`700 30px "Be Vietnam Pro"`); } catch { /* phông dự phòng */ }
+  const nd = noiDungCK(h.ma);
+  const qr = window.qrcode(0, 'M'); qr.addData(chuoiVietQR({ bin: tk.bin, stk: tk.stk, soTien, noiDung: nd })); qr.make();
+  const n = qr.getModuleCount(), o = Math.floor(560 / (n + 8)), canh = o * (n + 8), x0 = (W - canh) / 2;
+  const c = document.createElement('canvas'); c.width = W; c.height = 1500; const ctx = c.getContext('2d');
+  const chu = (s, y, co, dam, mau) => { ctx.font = `${dam ? 700 : 400} ${co}px ${PHONG}`; ctx.fillStyle = mau; ctx.textAlign = 'center'; ctx.fillText(s, W / 2, y); };
+  ctx.fillStyle = MAU.nen; ctx.fillRect(0, 0, W, c.height); ctx.fillStyle = MAU.nhan; ctx.fillRect(0, 0, W, 14);
+  chu(STUDIO.ten, 110, 60, true, MAU.chu);
+  chu(STUDIO.phu, 160, 30, false, MAU.nhan);
+  chu(`Chuyển khoản cho hợp đồng ${h.ma}`, 250, 36, true, MAU.chu);
+  chu(`Khách hàng: ${h.khach}`, 300, 30, false, MAU.nhat);
+  let y = 340;
+  ctx.fillStyle = '#fff'; ctx.fillRect(x0, y, canh, canh); ctx.fillStyle = '#000';
+  for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (qr.isDark(r, k)) ctx.fillRect(x0 + (k + 4) * o, y + (r + 4) * o, o, o);
+  y += canh + 80;
+  chu(tien(soTien), y, 64, true, MAU.do); y += 70;
+  chu(`${tk.nganHang} · ${tk.stk.replace(/(d{4})(?=d)/g, '$1 ')}`, y, 34, true, MAU.chu); y += 50;
+  chu(tk.chuTk, y, 32, false, MAU.chu); y += 50;
+  chu(`Nội dung: ${nd}`, y, 30, false, MAU.nhat); y += 60;
+  chu('Mở app ngân hàng → Quét mã — số tiền và nội dung tự điền sẵn', y, 26, false, MAU.nhat); y += 70;
+  chu(STUDIO.lienHe, y, 26, false, MAU.nhat); y += 50;
+  // Cắt canvas vừa nội dung
+  const ra = document.createElement('canvas'); ra.width = W; ra.height = y; ra.getContext('2d').drawImage(c, 0, 0);
+  return ra;
+}
+
+export async function moQrThu(h, soTien) {
+  const c = await veQrThu(h, soTien);
+  return moAnh(c, `qr-${h.ma}-${Math.round(soTien)}.png`, 'Mã QR chuyển khoản ' + h.ma);
+}
+
 /** Mở hộp xem trước + nút Chia sẻ / Tải ảnh. */
 export async function moHoaDon(h) {
-  const c = await veHoaDon(h);
+  return moAnh(await veHoaDon(h), `hoa-don-${h.ma}.png`, 'Hoá đơn Home Studio ' + h.ma);
+}
+
+async function moAnh(c, tenTep, tieuDe) {
   const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
   const url = URL.createObjectURL(blob);
-  const tenTep = `hoa-don-${h.ma}.png`;
   const tep = new File([blob], tenTep, { type: 'image/png' });
   const coChiaSe = !!(navigator.canShare && navigator.canShare({ files: [tep] }));
 
   const nen = document.createElement('div');
   nen.className = 'hop-nen';
-  nen.innerHTML = `<div class="hop" role="dialog" aria-label="Ảnh hoá đơn">
-    <img src="${url}" alt="Ảnh hoá đơn ${h.ma}">
+  nen.innerHTML = `<div class="hop" role="dialog" aria-label="${tieuDe}">
+    <img src="${url}" alt="${tieuDe}">
     <div class="hang-nut" style="margin-top:12px;justify-content:flex-end">
       <button class="nut phu nho" data-k="dong">Đóng</button>
       <a class="nut phu nho" data-k="tai" href="${url}" download="${tenTep}" style="text-decoration:none">Tải ảnh</a>
@@ -141,6 +180,6 @@ export async function moHoaDon(h) {
   nen.onclick = (e) => { if (e.target === nen) dong(); };
   nen.querySelector('[data-k=dong]').onclick = dong;
   const nutChia = nen.querySelector('[data-k=chia]');
-  if (nutChia) nutChia.onclick = async () => { try { await navigator.share({ files: [tep], title: 'Hoá đơn Home Studio ' + h.ma }); } catch { /* người dùng huỷ */ } };
+  if (nutChia) nutChia.onclick = async () => { try { await navigator.share({ files: [tep], title: tieuDe }); } catch { /* người dùng huỷ */ } };
   document.body.appendChild(nen);
 }
