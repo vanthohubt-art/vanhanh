@@ -1,6 +1,7 @@
 // App vận hành Home Studio — bản thử giai đoạn 1 (hợp đồng · lịch · thu tiền).
 // Màn hình chỉ gọi kho.js. Bản thật (Supabase) bắt đăng nhập; bản thử chọn "đang dùng" ở góc trên.
-import * as kho from './kho.js?v=20261108d';
+import * as kho from './kho.js?v=20261109a';
+import { moHoaDon } from './hoa-don.js?v=20261109a';
 
 const $ = (s, g = document) => g.querySelector(s);
 const tien = (n) => (Math.round(Number(n) || 0)).toLocaleString('vi-VN') + 'đ';
@@ -177,7 +178,8 @@ async function trangCa(id) {
         <span class="mo">Sang "Đã chụp" mà chưa có hẹn trả ảnh thì máy tự hẹn 10 ngày.</span></div>
     </div>
     <div class="the">
-      <h2>Tiền</h2>
+      <div class="hang-nut" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Tiền</h2>
+        ${coTien() ? '<button class="nut nho phu" id="anh-hd">Ảnh hoá đơn</button>' : ''}</div>
       <table>
         <tr><td>Gói ${esc(h.goi_ten)}${h.giam_gia ? ` (giảm ${tien(h.giam_gia)})` : ''}</td><td class="so">${tien(h.tien.tien_goi)}</td></tr>
         ${h.phatSinh.map((p) => `<tr><td>${esc(p.mo_ta)}${p.so_luong > 1 ? ' × ' + p.so_luong : ''}${coTien() ? ` <a href="#" data-xoa="${p.id}" class="mo">xoá</a>` : ''}</td><td class="so">${tien(p.thanh_tien)}</td></tr>`).join('')}
@@ -236,6 +238,7 @@ async function trangCa(id) {
   });
 
   if (coTien()) {
+  $('#anh-hd').onclick = () => chay(() => moHoaDon(h));
   const veCl = () => {
     const ds = DM.giaIn.filter((g) => g.co === $('#ps-co').value);
     $('#ps-cl').innerHTML = ds.map((g) => `<option value="${g.chat_lieu}" data-gia="${g.gia}">${esc(g.chat_lieu_ten)} — ${tien(g.gia)}</option>`).join('');
