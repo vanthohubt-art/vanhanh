@@ -2,8 +2,9 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261109e';
-import { moHoaDon } from './hoa-don.js?v=20261109e';
+import * as kho from './kho.js?v=20261109f';
+import { moHoaDon } from './hoa-don.js?v=20261109f';
+import * as mr from './mo-rong.js?v=20261109f';
 
 const $ = (s, g = document) => g.querySelector(s);
 const tien = (n) => (Math.round(Number(n) || 0)).toLocaleString('vi-VN') + 'đ';
@@ -35,22 +36,48 @@ const ICON = {
   tien: '<path d="M12 3v18M17 7H9.5a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H6"/>',
   canh: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0"/>',
   may: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="4"/>',
+  dich: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  them: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M19 8v6M16 11h6"/>',
+  anh: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
+  co: '<path d="m14 4 6 6-9 9H5v-6z"/><path d="M5 19l-2 2"/>',
+  qua: '<rect x="3" y="8" width="18" height="13" rx="1"/><path d="M3 12h18M12 8v13M12 8S10 3 7.5 4 9 8 12 8s3.5-3 4.5-4S12 8 12 8"/>',
+  video: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/>',
+  tim2: '<path d="M12 20s-7-4.5-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.5-9 9-9 9z"/>',
+  sao: '<path d="m12 3 2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z"/>',
+  tui: '<path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  gui: '<path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/>',
 };
 const ic = (k) => `<svg viewBox="0 0 24 24">${ICON[k] || ''}</svg>`;
 
 // Menu theo dòng chảy một khách. Chỉ có mục đã làm thật — không để mục rỗng (bài học Sky: 234 sản phẩm, 0 đang hoạt động).
+// 09/11 (lần 2): anh Thọ muốn ĐỦ menu như Sky ⇒ mỗi mục đều có màn hình thật (008-mo-rong.sql + mo-rong.js).
 const MENU = [
   { tt: '', ten: 'Trang chủ', ic: 'nha' },
   { tt: 'tim', ten: 'Tìm khách', ic: 'tim' },
+  { tt: 'ke-hoach', ten: 'Kế hoạch tháng', ic: 'dich' },
   { nhom: 'Bán hàng' },
+  { tt: 'lead', ten: 'Khách tiềm năng', ic: 'them' },
   { tt: 'moi', ten: 'Lên hợp đồng', ic: 'hd', tien: true },
+  { tt: 'concept', ten: 'Ảnh mẫu concept', ic: 'anh' },
+  { tt: 'makeup', ten: 'Ảnh makeup', ic: 'co' },
   { tt: 'san-pham', ten: 'Sản phẩm & dịch vụ', ic: 'hop' },
   { nhom: 'Chụp & hậu kỳ' },
   { tt: 'lich', ten: 'Lịch chụp', ic: 'lich' },
-  { tt: 'hau-ky', ten: 'Hậu kỳ & hạn giao ảnh', ic: 'hk' },
+  { tt: 'hau-ky', ten: 'Hậu kỳ', ic: 'hk' },
+  { tt: 'han-giao', ten: 'Hạn giao ảnh', ic: 'qua' },
+  { tt: 'video', ten: 'Video khách', ic: 'video' },
+  { nhom: 'Sau chụp' },
+  { tt: 'cskh', ten: 'Chăm sóc khách', ic: 'tim2' },
+  { tt: 'chat-luong', ten: 'Chất lượng dịch vụ', ic: 'sao' },
   { nhom: 'Thu chi' },
   { tt: 'cong-no', ten: 'Công nợ & thu tiền', ic: 'vi' },
+  { tt: 'chi', ten: 'Chi cửa hàng', ic: 'tui' },
+  { nhom: 'Marketing' },
+  { tt: 'dang-bai', ten: 'Đăng bài Facebook', ic: 'gui' },
 ];
+const laChu = () => vaiToi.includes('chu');
+// Ngữ cảnh đưa cho các màn hình ở mo-rong.js.
+const ctx = () => ({ kho, DM, toi, vaiToi, coTien, laChu, $, tien, trieu, esc, homNay, congNgay, ngayVN, THU, theSo, dauTrang, theCa, sdtHtml, bao, chay, trang: $('#trang') });
 
 function bao(s, loi) {
   const b = Object.assign(document.createElement('div'), { className: 'bao' + (loi ? ' loi' : ''), textContent: s });
@@ -209,10 +236,17 @@ async function trangMoi(ngayGoiY = '') {
             <label>Hình thức<select id="htcoc"><option value="chuyen_khoan">Chuyển khoản</option><option value="tien_mat">Tiền mặt</option></select></label></div>
           <label style="margin-top:10px">Ghi chú cho ekip<textarea id="ghi" rows="3" placeholder="Bé hay ngủ trưa lúc mấy giờ, đi mấy người, khách lo lắng điều gì…"></textarea></label>
         </div>
-        <div class="hang-nut"><button class="nut" id="luu">Lưu hợp đồng</button><a class="nut phu" href="#/">Huỷ</a></div>
+        <div class="hang-nut"><button class="nut" id="luu">Lưu hợp đồng</button><a class="nut phu" href="#/" onclick="sessionStorage.removeItem('lead')">Huỷ</a></div>
       </div>
     </div>`;
   batChip($('#ekip'));
+  const lead = JSON.parse(sessionStorage.getItem('lead') || 'null');
+  if (lead) {
+    $('#sdt').value = lead.sdt || ''; $('#ten').value = lead.ten || '';
+    $('#nguon').value = lead.kenh === 'gioi_thieu' ? 'gioi_thieu' : 'chua_ro';
+    $('#nguon-bc').value = 'Khách tiềm năng #' + lead.id + ' · kênh ' + lead.kenh + (lead.nhu_cau ? ' · "' + lead.nhu_cau + '"' : '');
+    $('#ghi').value = lead.nhu_cau || '';
+  }
   $('#sdt').onblur = () => chay(async () => {
     const k = await kho.timKhach($('#sdt').value);
     $('#khach-cu').innerHTML = k ? `Khách cũ: <b>${esc(k.ten)}</b> · đã có ${k.so_ca} ca. Hợp đồng sẽ gắn vào hồ sơ này.` : '';
@@ -244,6 +278,10 @@ async function trangMoi(ngayGoiY = '') {
         sale_online_id: $('#sale').value ? Number($('#sale').value) : null, ekip: docEkip($('#ekip')),
         coc: $('#coc').value, hinh_thuc_coc: $('#htcoc').value, ghi_chu: $('#ghi').value.trim(),
       }, toi);
+      if (lead) {   // gắn hợp đồng vào khách tiềm năng ⇒ đo được tỉ lệ chốt
+        await kho.ham('crm_luu_lead', { d: { ...lead, sdt: lead.sdt || '', trang_thai: 'da_chot', hop_dong_id: h.id }, p_ai: toi });
+        sessionStorage.removeItem('lead');
+      }
       bao('Đã tạo ' + h.ma); location.hash = '#/ca/' + h.id;
     } finally { $('#luu').disabled = false; }
   });
@@ -288,6 +326,7 @@ async function trangCa(id) {
           ${coTien() ? `<div id="ekip">${ekipHtml(h.ekip)}</div><button class="nut nho phu" id="luu-ekip">Lưu ekip</button>`
             : `<div class="hang-nut">${h.ekip.map((e) => `<span class="ekip-chip">${esc(e.ten)} · ${VAI[e.vai] || e.vai}</span>`).join('') || '<span class="mo">Chưa xếp ekip</span>'}</div><p class="mo" style="margin:8px 0 0">Chỉ sale online hoặc anh Thọ sửa ekip.</p>`}
         </div>
+        <div id="ho-so-them"></div>
         <div class="the"><h2>Gói gồm</h2>
           <p class="mo" style="margin:0">${[h.so_boi_canh, h.so_anh_sua ? h.so_anh_sua + ' ảnh sửa' : '', h.qua_in_co ? 'in ' + h.qua_in_co : '', h.qua_checkin ? 'tặng ' + h.qua_checkin + ' khi check-in' : '', h.noi_dung].filter(Boolean).map(esc).join(' · ') || '—'}</p></div>
       </div>
@@ -331,6 +370,7 @@ async function trangCa(id) {
       </div>
     </div>`;
 
+  chay(() => mr.veHoSoThem(ctx(), h, $('#ho-so-them')));
   let ttChon = h.trang_thai;
   document.querySelectorAll('[data-tt]').forEach((b) => (b.onclick = () => {
     ttChon = Number(b.dataset.tt);
@@ -581,6 +621,16 @@ async function dieuHuong() {
     else if (p0 === 'hau-ky') await trangHauKy();
     else if (p0 === 'cong-no') await trangCongNo(p1 || undefined);
     else if (p0 === 'san-pham') await trangSanPham();
+    else if (p0 === 'ke-hoach') await mr.trangKeHoach(ctx(), p1 || undefined);
+    else if (p0 === 'lead') await mr.trangLead(ctx(), p1 || '');
+    else if (p0 === 'concept') await mr.trangAnhMau(ctx(), 'concept');
+    else if (p0 === 'makeup') await mr.trangAnhMau(ctx(), 'makeup');
+    else if (p0 === 'han-giao') await mr.trangHanGiao(ctx());
+    else if (p0 === 'video') await mr.trangVideo(ctx(), p1 || 'can_lam');
+    else if (p0 === 'cskh') await mr.trangCskh(ctx());
+    else if (p0 === 'chat-luong') await mr.trangChatLuong(ctx(), p1 || undefined);
+    else if (p0 === 'chi') await mr.trangChi(ctx(), p1 || undefined);
+    else if (p0 === 'dang-bai') await mr.trangDangBai(ctx());
     else await trangChu();
   });
   if (p0 && !tcNho) lamMoiDaiGap();
@@ -649,6 +699,7 @@ async function vaoApp() {
   }
   $('#menu-trai').hidden = false; $('.dau').hidden = false; document.querySelector('.khung').style.gridTemplateColumns = '';
   DM = await kho.danhMuc();
+  DM.hangMuc = [...new Map(DM.goi.map((g) => [g.hang_muc, { ma: g.hang_muc, ten: g.hang_muc_ten }])).values()];
   if (!kho.THAT) $('#toi').innerHTML = '<option value="">Đang dùng: —</option>' + DM.nhanSu.map((n) => `<option value="${n.ma}" ${n.ma === toi ? 'selected' : ''}>${esc(n.ten)}</option>`).join('');
   if (!kho.THAT) vaiToi = DM.nhanSu.find((n) => n.ma === toi)?.vai || [];
   veMenu();
