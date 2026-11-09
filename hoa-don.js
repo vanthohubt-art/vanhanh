@@ -2,7 +2,7 @@
 // Sale bấm "Ảnh hoá đơn" ở màn hình ca → xem trước → Chia sẻ (Zalo/Messenger trên điện thoại) hoặc Tải ảnh.
 // Chỉ in thứ khách nên thấy: gói, phát sinh, tiền đã thu, còn lại, hẹn trả ảnh. KHÔNG in ghi chú nội bộ, ekip, lịch sử.
 
-import { TAI_KHOAN_NHAN } from './cau-hinh.js?v=20261109b';
+import { TAI_KHOAN_NHAN } from './cau-hinh.js?v=20261109h';
 import { chuoiVietQR, noiDungCK } from './vietqr.js?v=20261109b';
 
 const STUDIO = {

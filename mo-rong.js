@@ -3,6 +3,8 @@
 // Chăm sóc khách · Chất lượng dịch vụ · Chi cửa hàng · Đăng bài Facebook · và phần thêm của hồ sơ ca.
 // Mỗi hàm nhận `c` (ngữ cảnh từ app.js): kho, DM, toi, vaiToi, coTien, laChu và các hàm định dạng.
 
+import { ALBUM_URL } from './cau-hinh.js?v=20261109h';
+
 const KENH = { facebook: 'Facebook', zalo: 'Zalo', tiktok: 'TikTok', instagram: 'Instagram', gioi_thieu: 'Người quen giới thiệu', vang_lai: 'Vãng lai', website: 'Website', khac: 'Khác' };
 const TT_LEAD = { moi: ['Mới', 'tt1'], dang_tu_van: ['Đang tư vấn', 'tt3'], da_bao_gia: ['Đã báo giá', 'tt4'], hen_den: ['Hẹn đến studio', 'tt6'], da_chot: ['Đã chốt', 'tt2'], mat: ['Mất', 'tt5'] };
 const KHOAN = { mat_bang: 'Mặt bằng', dien_nuoc: 'Điện nước', luong: 'Lương', quang_cao: 'Quảng cáo', in_an: 'In ấn', dao_cu_trang_phuc: 'Đạo cụ · trang phục', thiet_bi: 'Thiết bị', van_phong_pham: 'Văn phòng phẩm', an_uong: 'Ăn uống', van_chuyen: 'Vận chuyển', sua_chua: 'Sửa chữa', khac: 'Khác' };
@@ -370,6 +372,51 @@ export async function trangDangBai(c) {
   document.querySelectorAll('[data-bd]').forEach((x) => (x.onclick = () => moBai(ds.find((b) => b.id === Number(x.dataset.bd)))));
 }
 
+// ═════════ ALBUM CHỌN ẢNH trong hồ sơ ca ═════════
+// Album chạy ở Apps Script; CRM chỉ lưu mã và đọc tóm tắt (?api=tom). Khách gửi xong ⇒ sale bấm "Đưa vào hoá đơn".
+async function docTomAlbum(ma) {
+  const r = await fetch(`${ALBUM_URL}?api=tom&a=${encodeURIComponent(ma)}&t=${Date.now()}`, { redirect: 'follow' });
+  if (!r.ok) throw new Error('Không đọc được album (HTTP ' + r.status + ')');
+  const j = await r.json();
+  if (j.loi) throw new Error(j.loi);
+  return j;
+}
+async function veAlbum(c, h, al, el, veLai) {
+  if (!el) return;
+  const linkKhach = al.ma ? `${ALBUM_URL}?a=${al.ma}` : '';
+  const dauThe = `<div class="dau-the"><h2>Album chọn ảnh</h2><span class="phai"><a class="nut phu nho" href="${ALBUM_URL}?ql" target="_blank" rel="noopener">Tạo / quản lý album</a></span></div>`;
+  const oGan = `<div class="hai" style="margin-top:8px"><label>Link album của khách<input id="al-link" value="${c.esc(linkKhach)}" placeholder="Dán link …/exec?a=xxxxxxxxxxxx"></label>
+    <div style="align-self:end"><button class="nut phu nho" id="al-gan">${al.ma ? 'Đổi / gỡ' : 'Gắn album'}</button></div></div>`;
+  const ganNut = () => {
+    const b = el.querySelector('#al-gan');
+    if (b) b.onclick = () => c.chay(async () => { await c.kho.ham('crm_gan_album', { p_id: h.id, p_link: el.querySelector('#al-link').value.trim(), p_ai: c.toi }); c.bao('Đã lưu'); veLai(); });
+  };
+  if (!al.ma) { el.innerHTML = dauThe + '<div class="mo">Chưa gắn album. Tạo album cho khách ở app album rồi dán link vào đây — khách chọn ảnh in xong, bấm một nút là phát sinh vào hoá đơn.</div>' + oGan; ganNut(); return; }
+  let t;
+  try { t = await docTomAlbum(al.ma); }
+  catch (e) { el.innerHTML = dauThe + `<div class="canh">Chưa đọc được album ${al.ma}: ${c.esc(e.message)}</div><a class="nut phu nho" href="${linkKhach}" target="_blank" rel="noopener">Mở album</a>` + oGan; ganNut(); return; }
+  const daGui = t.trangThai === 'da_gui';
+  el.innerHTML = dauThe + `
+    <div class="hang-nut"><span class="nhan ${daGui ? 'tt2' : 'tt3'}">${daGui ? 'Khách đã gửi ' + c.esc(t.guiLuc || '') : 'Khách đang chọn'}</span>
+      <span class="mo">${t.sua}${t.quota ? '/' + t.quota : ''} ảnh sửa${t.vuot ? ` · <b style="color:var(--do)">vượt ${t.vuot}</b>` : ''}</span>
+      <a class="nut phu nho" href="${linkKhach}" target="_blank" rel="noopener" style="margin-left:auto">Mở album</a></div>
+    <table style="margin-top:8px">${t.dsIn.map((x) => `<tr><td>In ${c.esc(x.co)} ${c.esc(x.cl)} × ${x.sl} <span class="mo nho">· ${c.esc(x.ten)}</span></td><td class="so">${c.tien(x.tien)}</td></tr>`).join('')}
+      ${t.tienNang ? `<tr><td>Nâng ảnh tặng ${c.esc(t.tang.co)} ${c.esc(t.tang.cl)} → ${c.esc(t.tang.nangLen)}</td><td class="so">${c.tien(t.tienNang)}</td></tr>` : ''}
+      ${t.tienAnhThem ? `<tr><td>Ảnh sửa vượt gói × ${t.vuot}</td><td class="so">${c.tien(t.tienAnhThem)}</td></tr>` : t.vuot && t.giaAnhThemChuaChot ? `<tr><td colspan="2" class="mo">Vượt ${t.vuot} ảnh — giá ảnh thêm chưa chốt, báo khách sau.</td></tr>` : ''}
+      <tr class="tong"><td>Phát sinh từ album</td><td class="so">${c.tien(t.tongPhatSinh)}</td></tr></table>
+    ${al.nhap_luc ? `<div class="mo" style="margin-top:6px">✓ Đã đưa vào hoá đơn lúc ${al.nhap_luc}.</div>`
+      : daGui && t.tongPhatSinh > 0 && c.coTien() ? `<div class="hang-nut" style="margin-top:8px"><button class="nut nho" id="al-nhap">Đưa ${c.tien(t.tongPhatSinh)} vào hoá đơn</button></div>`
+      : !daGui ? '<div class="mo" style="margin-top:6px">Chờ khách bấm "Gửi" trong album rồi mới đưa vào hoá đơn.</div>' : ''}` + oGan;
+  ganNut();
+  const nut = el.querySelector('#al-nhap');
+  if (nut) nut.onclick = () => c.chay(async () => {
+    const moi = await docTomAlbum(al.ma);   // đọc lại ngay lúc bấm — không dùng số cũ trên màn hình
+    const r = await c.kho.ham('crm_nhap_album', { p_id: h.id, p_tom: moi, p_ai: c.toi });
+    c.bao(`Đã thêm ${r.dong} dòng · ${c.tien(r.tien)} vào hoá đơn`);
+    location.hash = '#/x'; setTimeout(() => (location.hash = '#/ca/' + h.id), 50);
+  });
+}
+
 // ═════════ PHẦN THÊM CỦA HỒ SƠ CA ═════════
 // Concept + makeup khách chọn · thông tin bé · video · checkout makeup · đánh giá.
 export async function veHoSoThem(c, h, chua) {
@@ -379,6 +426,7 @@ export async function veHoSoThem(c, h, chua) {
   chua.innerHTML = `
     <div class="the"><div class="dau-the"><h2>Concept & makeup khách chọn</h2><span class="phai"><button class="nut phu nho" data-chon="concept">Chọn concept</button> <button class="nut phu nho" data-chon="makeup">Chọn makeup</button></span></div>
       <div class="luoi-anh nho">${t.anh_mau.map((a) => `<figure class="o-anh"><img src="${c.esc(anhTrucTiep(a.anh_url))}" alt="" loading="lazy"><figcaption><b>${c.esc(a.ten)}</b><span class="mo nho">${a.loai}</span></figcaption></figure>`).join('') || '<div class="mo">Chưa chọn — sale gửi ảnh mẫu cho khách rồi ghi lại đây để ekip chuẩn bị.</div>'}</div></div>
+    <div class="the" id="the-album"><h2>Album chọn ảnh</h2><div class="mo">Đang đọc album…</div></div>
     <div class="the"><h2>Thông tin bé</h2><div class="mo nho" style="margin-bottom:6px">Để CSKH nhắc đúng tên và mời chụp sinh nhật.</div>
       <div class="hai"><label>Tên bé<input id="be-ten" value="${c.esc(t.be?.ten_be || '')}"></label><label>Ngày sinh bé<input id="be-ns" type="date" value="${t.be?.ngay_sinh_be || ''}"></label></div>
       <div class="hang-nut" style="margin-top:8px"><button class="nut phu nho" id="be-luu">Lưu thông tin bé</button></div></div>
@@ -391,6 +439,7 @@ export async function veHoSoThem(c, h, chua) {
     <div class="the"><div class="dau-the"><h2>Đánh giá của khách</h2><span class="phai"><button class="nut phu nho" id="dg-moi">+ Ghi đánh giá</button></span></div>
       ${t.danh_gia.map((d) => `<div class="gd"><span>${d.nhan_xet ? '"' + c.esc(d.nhan_xet) + '"' : '<span class="mo">không ghi lời</span>'} ${d.van_de.map((v) => `<span class="nhan do">${VAN_DE[v] || v}</span>`).join(' ')}</span><b>${'★'.repeat(d.diem)} <span class="mo nho">${d.luc}</span></b></div>`).join('') || '<div class="mo">Chưa có.</div>'}</div>`;
   const veLai = () => veHoSoThem(c, h, chua);
+  veAlbum(c, h, t.album || {}, chua.querySelector('#the-album'), veLai);
   chua.querySelectorAll('[data-chon]').forEach((b) => (b.onclick = () => c.chay(async () => {
     const loai = b.dataset.chon, ds = await c.kho.ham('crm_anh_mau', { p_loai: loai }), dang = new Set(am(loai).map((a) => a.id));
     const x = hop(c, loai === 'concept' ? 'Concept khách chọn' : 'Kiểu makeup khách chọn', ds.length

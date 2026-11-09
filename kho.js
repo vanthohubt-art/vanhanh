@@ -2,12 +2,12 @@
 // Hai đường chạy, cùng bộ hàm:
 //   · Supabase (bản thật) — khi cau-hinh.js có URL + khoá công khai. Phải đăng nhập; nhật ký ghi theo tài khoản.
 //   · PGlite (bản thử)    — khi cau-hinh.js để trống: Postgres chạy ngay trong trình duyệt, lưu IndexedDB.
-import { SUPABASE_URL, SUPABASE_KHOA_CONG_KHAI } from './cau-hinh.js?v=20261109b';
+import { SUPABASE_URL, SUPABASE_KHOA_CONG_KHAI } from './cau-hinh.js?v=20261109h';
 
 export const THAT = !!(SUPABASE_URL && SUPABASE_KHOA_CONG_KHAI) && !new URLSearchParams(location.search).has('thu');
 let db, sb;
 const so = (v) => (v == null ? 0 : Number(v));
-const SQL_THU = ['../db/001-bang.sql', '../db/002-danh-muc.sql', '../db/004-ham-app.sql', '../db/007-ham-tong-quan.sql', '../db/008-mo-rong.sql', '../db/009-pancake-lead.sql'];
+const SQL_THU = ['../db/001-bang.sql', '../db/002-danh-muc.sql', '../db/004-ham-app.sql', '../db/007-ham-tong-quan.sql', '../db/008-mo-rong.sql', '../db/009-pancake-lead.sql', '../db/010-album.sql'];
 const docSql = async (f) => (await fetch(f, { cache: 'no-store' })).text();
 
 export async function moKho(ten = 'crm-home-studio') {
@@ -23,7 +23,7 @@ export async function moKho(ten = 'crm-home-studio') {
   if (!rows[0].co) for (const f of SQL_THU) await db.exec(await docSql(f));
   else if (!rows[0].co_ham) await db.exec(await docSql('../db/004-ham-app.sql'));   // sổ thử cũ (trước 08/11) chưa có hàm
   // 007 toàn "create or replace" ⇒ nạp lại mỗi lần mở để sổ thử cũ luôn có bản hàm mới nhất.
-  if (rows[0].co) for (const f of ['../db/007-ham-tong-quan.sql', '../db/008-mo-rong.sql', '../db/009-pancake-lead.sql']) await db.exec(await docSql(f));
+  if (rows[0].co) for (const f of ['../db/007-ham-tong-quan.sql', '../db/008-mo-rong.sql', '../db/009-pancake-lead.sql', '../db/010-album.sql']) await db.exec(await docSql(f));
 }
 
 export async function xoaSachVaNapLai() {
