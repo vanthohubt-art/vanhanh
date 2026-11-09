@@ -2,9 +2,9 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261109h';
-import { moHoaDon } from './hoa-don.js?v=20261109h';
-import * as mr from './mo-rong.js?v=20261109h';
+import * as kho from './kho.js?v=20261109i';
+import { moHoaDon } from './hoa-don.js?v=20261109i';
+import * as mr from './mo-rong.js?v=20261109i';
 
 const $ = (s, g = document) => g.querySelector(s);
 const tien = (n) => (Math.round(Number(n) || 0)).toLocaleString('vi-VN') + 'đ';
@@ -72,6 +72,7 @@ const MENU = [
   { nhom: 'Thu chi' },
   { tt: 'cong-no', ten: 'Công nợ & thu tiền', ic: 'vi' },
   { tt: 'chi', ten: 'Chi cửa hàng', ic: 'tui' },
+  { tt: 'hoa-hong', ten: 'Lương & hoa hồng', ic: 'tien' },
   { nhom: 'Marketing' },
   { tt: 'dang-bai', ten: 'Đăng bài Facebook', ic: 'gui' },
 ];
@@ -631,6 +632,7 @@ async function dieuHuong() {
     else if (p0 === 'chat-luong') await mr.trangChatLuong(ctx(), p1 || undefined);
     else if (p0 === 'chi') await mr.trangChi(ctx(), p1 || undefined);
     else if (p0 === 'dang-bai') await mr.trangDangBai(ctx());
+    else if (p0 === 'hoa-hong') await mr.trangHoaHong(ctx(), p1 || undefined);
     else await trangChu();
   });
   if (p0 && !tcNho) lamMoiDaiGap();

@@ -465,3 +465,30 @@ export async function veHoSoThem(c, h, chua) {
     c.bao('Đã lưu checkout'); veLai();
   });
 }
+
+// ═════════ LƯƠNG & HOA HỒNG (011, 09/11/2026) ═════════
+// Chỉ phần HOA HỒNG tự tính từ ekip của ca. Lương cứng · chấm công · thưởng · tăng ca vẫn ở app lương.
+// Chủ xem mọi người; nhân viên chỉ thấy dòng của mình (máy chủ lọc, không phải ẩn).
+const TEN_VAI = { sale_online: 'Sale online · giá gói', sale_offline: 'Sale tại studio · phát sinh', chup: 'Chụp · tổng hoá đơn', pts: 'PTS · tổng hoá đơn', stylist: 'Stylist · tổng hoá đơn' };
+export async function trangHoaHong(c, thang = c.homNay().slice(0, 7)) {
+  const r = await c.kho.ham('crm_hoa_hong', { p_thang: thang + '-01', p_ai: c.toi });
+  const pt = (x) => (Number(x) * 100).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + '%';
+  c.trang.innerHTML = c.dauTrang('Thu chi', 'Lương & hoa hồng', r.la_chu
+    ? `Hoa hồng tự tính từ ekip từng ca có ngày chụp trong tháng. Lương cứng, chấm công, thưởng, tăng ca vẫn ở app lương.`
+    : `Hoa hồng của bạn trong tháng, tính từ các ca có tên bạn trong ekip. Thấy thiếu ca nào thì báo sale sửa ekip.`, navThang('#/hoa-hong', thang)) + `
+    ${r.la_chu ? `<div class="so-lieu bon">
+      ${c.theSo('#/hoa-hong/' + thang, 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Tổng hoa hồng phải trả', c.trieu(r.tong_hoa_hong), 'không gồm lương cố định của anh')}
+      ${c.theSo('#/hoa-hong/' + thang, 'lich', ['var(--tt8n)', 'var(--tt8c)'], 'Ca trong tháng', r.so_ca, c.trieu(r.tong_hoa_don) + ' tổng hoá đơn')}
+      ${c.theSo('#/hoa-hong/' + thang, 'hd', ['var(--nhan-nhat)', 'var(--nhan-dam)'], 'Tỉ lệ trên doanh thu', Number(r.tong_hoa_don) ? pt(Number(r.tong_hoa_hong) / Number(r.tong_hoa_don)) : '—', 'hoa hồng / tổng hoá đơn')}
+      ${c.theSo('#/hoa-hong/' + thang, 'canh', ['var(--do-nhat)', 'var(--do)'], 'Ca thiếu ekip / tiền', (r.thieu || []).length, 'hoa hồng có thể bị sót')}
+    </div>` : ''}
+    <div class="luoi-ca" style="grid-template-columns:repeat(auto-fill,minmax(330px,1fr))">${r.nguoi.map((x) => `<div class="the-ca" style="border-left-color:${x.nhan_hoa_hong ? 'var(--xanh)' : 'var(--vien)'}">
+      <div class="hang"><span class="ten">${c.esc(x.ten)}</span><span class="tien">${x.nhan_hoa_hong ? c.tien(x.tong) : '<span class="mo">lương cố định</span>'}</span></div>
+      ${!x.nhan_hoa_hong ? `<div class="phu">Tham khảo: ${c.tien(x.tong)} nếu tính hoa hồng — không cộng vào tổng.</div>` : ''}
+      <table>${x.vai.map((v) => `<tr><td>${TEN_VAI[v.vai] || v.vai}<br><span class="mo nho">${v.so_ca} ca · ${c.tien(v.mau)} × ${pt(v.ti_le)}</span></td><td class="so">${c.tien(v.tien)}</td></tr>`).join('')}
+        ${x.make ? `<tr><td>Makeup<br><span class="mo nho">${x.make.lon} người lớn · ${x.make.be} trẻ em · ${x.make.so_ca} ca</span></td><td class="so">${x.make.tien == null ? '<span class="mo">chưa có đơn giá</span>' : c.tien(x.make.tien)}</td></tr>` : ''}</table>
+    </div>`).join('') || '<div class="trong">Chưa có ca nào có tên trong ekip tháng này.</div>'}</div>
+    ${r.la_chu && (r.thieu || []).length ? `<div class="the"><h2>Ca thiếu dữ liệu — hoa hồng có thể bị sót</h2><div class="mo nho" style="margin-bottom:6px">Ô trống có thể là anh tự làm (không tính) — chỉ cần soát cho chắc.</div>
+      <div class="cuon-doc" style="max-height:320px">${r.thieu.map((t) => `<a class="gd" href="#/ca/${t.id}" style="text-decoration:none"><span>${c.ngayVN(t.ngay)} · ${t.ma}</span><span class="mo nho">${c.esc(t.ly_do)}</span></a>`).join('')}</div></div>` : ''}
+    ${r.la_chu ? `<div class="the mo">Tỉ lệ đang dùng: ${Object.entries(r.ti_le || {}).map(([k, v]) => `${(TEN_VAI[k] || k).split(' · ')[0]} ${pt(v)}`).join(' · ')} · Mai stylist 2,5% · nhiều người cùng vai trong một ca ⇒ mỗi người 1/N (anh chốt 06/11). Đổi tỉ lệ thì nhắn trợ lý.</div>` : ''}`;
+}
