@@ -7,7 +7,7 @@ import { SUPABASE_URL, SUPABASE_KHOA_CONG_KHAI } from './cau-hinh.js?v=20261109b
 export const THAT = !!(SUPABASE_URL && SUPABASE_KHOA_CONG_KHAI) && !new URLSearchParams(location.search).has('thu');
 let db, sb;
 const so = (v) => (v == null ? 0 : Number(v));
-const SQL_THU = ['../db/001-bang.sql', '../db/002-danh-muc.sql', '../db/004-ham-app.sql'];
+const SQL_THU = ['../db/001-bang.sql', '../db/002-danh-muc.sql', '../db/004-ham-app.sql', '../db/007-ham-tong-quan.sql'];
 const docSql = async (f) => (await fetch(f, { cache: 'no-store' })).text();
 
 export async function moKho(ten = 'crm-home-studio') {
@@ -19,9 +19,11 @@ export async function moKho(ten = 'crm-home-studio') {
   const { PGlite } = await import('https://cdn.jsdelivr.net/npm/@electric-sql/pglite@0.2.17/dist/index.js');
   db = new PGlite('idb://' + ten);
   await db.waitReady;
-  const { rows } = await db.query("select to_regclass('public.goi') is not null co, to_regproc('public.crm_danh_muc') is not null co_ham");
+  const { rows } = await db.query("select to_regclass('public.goi') is not null co, to_regproc('public.crm_danh_muc') is not null co_ham, to_regproc('public.crm_trang_chu') is not null co_007");
   if (!rows[0].co) for (const f of SQL_THU) await db.exec(await docSql(f));
   else if (!rows[0].co_ham) await db.exec(await docSql('../db/004-ham-app.sql'));   // sổ thử cũ (trước 08/11) chưa có hàm
+  // 007 toàn "create or replace" ⇒ nạp lại mỗi lần mở để sổ thử cũ luôn có bản hàm mới nhất.
+  if (rows[0].co) await db.exec(await docSql('../db/007-ham-tong-quan.sql'));
 }
 
 export async function xoaSachVaNapLai() {
@@ -148,3 +150,23 @@ export async function tongQuan() {
   r.con_phai_thu = so(r.con_phai_thu);
   return r;
 }
+
+// ───────── giao diện mới (007, 09/11/2026) ─────────
+// Supabase trả bigint dạng chuỗi ⇒ đổi các ô tiền về số.
+const O_TIEN = ['tien', 'tong_hoa_don', 'da_thu', 'con_lai', 'so_tien', 'ck', 'tm', 'con_no'];
+const soHoa = (o) => { for (const k of Object.keys(o || {})) if (O_TIEN.includes(k)) o[k] = so(o[k]); return o; };
+export async function trangChu(thang) {
+  const r = await goi('crm_trang_chu', { p_thang: thang || null });
+  ['hd_moi', 'thuc_thu', 'cong_no'].forEach((k) => soHoa(r[k]));
+  r.lich_hom_nay.forEach(soHoa);
+  return r;
+}
+export async function congNo(thang) {
+  const r = await goi('crm_cong_no', { p_thang: thang || null });
+  soHoa(r.thu); r.thu.hom_nay = so(r.thu.hom_nay); r.thu_thang_truoc = so(r.thu_thang_truoc); soHoa(r.con_no);
+  for (const g of Object.values(r.giai_doan)) soHoa(g);
+  r.hang_muc.forEach((h) => { h.da_thu = so(h.da_thu); h.con_no = so(h.con_no); });
+  r.phieu.forEach(soHoa); r.can_thu.forEach(soHoa);
+  return r;
+}
+export const hauKy = () => goi('crm_hau_ky');

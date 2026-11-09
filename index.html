@@ -7,22 +7,31 @@
 <title>Vận hành – Home Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=20261109b">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css?v=20261109e">
 </head>
 <body>
-<header class="dau"><div class="trong">
-  <a class="logo" href="#/">Home <span>Studio</span> · vận hành</a>
-  <nav class="menu">
-    <a href="#/" data-trang="">Ca chụp</a>
-    <a href="#/lich" data-trang="lich">Lịch</a>
-    <a href="#/moi" data-trang="moi">+ Hợp đồng</a>
-  </nav>
-  <select class="toi" id="toi" title="Đang dùng"></select>
-  <span class="toi" id="nguoi" hidden></span>
-</div></header>
-<main id="trang"><p class="mo">Đang mở sổ…</p></main>
+<div class="khung">
+  <aside class="menu-trai" id="menu-trai" aria-label="Menu">
+    <a class="logo" href="#/"><span class="logo-o">H</span><span><b>HOME STUDIO</b><small>Vận hành studio</small></span></a>
+    <nav id="menu"></nav>
+    <div class="chan-menu">
+      <select class="toi" id="toi" title="Đang dùng (bản thử)"></select>
+      <div id="nguoi" hidden></div>
+    </div>
+  </aside>
+  <div class="nen-menu" id="nen-menu"></div>
+  <div class="than">
+    <header class="dau">
+      <button class="nut-menu" id="mo-menu" aria-label="Mở menu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <div class="tieu-de" id="tieu-de"><small>HOME STUDIO</small><b>Trang chủ</b></div>
+      <form class="tim-nhanh" id="tim-nhanh" role="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="tim-o" placeholder="Tìm nhanh theo tên, SĐT, mã hợp đồng…" autocomplete="off"></form>
+    </header>
+    <a class="dai-gap" id="dai-gap" href="#/" hidden></a>
+    <main id="trang"><p class="mo">Đang mở sổ…</p></main>
+  </div>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
-<script type="module" src="app.js?v=20261109b"></script>
+<script type="module" src="app.js?v=20261109e"></script>
 </body>
 </html>
