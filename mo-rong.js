@@ -95,13 +95,17 @@ export async function trangLead(c, loc = '') {
       ${c.theSo('#/lead', 'canh', ['var(--do-nhat)', 'var(--do)'], 'Quá hẹn liên hệ', r.qua_hen, r.qua_hen ? 'nhắn lại ngay' : 'không ai bị bỏ quên')}
       ${c.theSo('#/lead', 'tim', ['var(--tt4n)', 'var(--tt4c)'], 'Đang theo', dangMo, 'chưa chốt, chưa mất')}
       ${c.theSo('#/lead/da_chot', 'hd', ['var(--xanh-nhat)', 'var(--xanh)'], 'Đã chốt', n(dem.da_chot), n(dem.mat) + ' mất')}
-      ${c.theSo('#/lead', 'nha', ['var(--tt8n)', 'var(--tt8c)'], 'Nguồn 30 ngày', Object.values(r.theo_kenh || {}).reduce((s, x) => s + n(x), 0), Object.entries(r.theo_kenh || {}).map(([k, v]) => `${KENH[k] || k} ${v}`).join(' · ') || 'chưa có')}
+      ${r.qc_30 ? c.theSo('#/lead', 'nha', ['var(--tt8n)', 'var(--tt8c)'], 'Từ quảng cáo (30 ngày)', `${r.qc_30.so}/${r.qc_30.tong}`,
+        r.qc_30.so ? `chốt ${r.qc_30.chot} · ${Math.round((100 * r.qc_30.chot) / r.qc_30.so)}% · tổng chốt ${r.qc_30.tong_chot}` : 'chưa có khách từ quảng cáo')
+        : c.theSo('#/lead', 'nha', ['var(--tt8n)', 'var(--tt8c)'], 'Nguồn 30 ngày', Object.values(r.theo_kenh || {}).reduce((s, x) => s + n(x), 0), Object.entries(r.theo_kenh || {}).map(([k, v]) => `${KENH[k] || k} ${v}`).join(' · ') || 'chưa có')}
     </div>
     <div class="the" style="padding:12px 14px"><a class="chip ${!loc ? 'chon' : ''}" href="#/lead">Tất cả</a>${Object.entries(TT_LEAD).map(([k, [t]]) => `<a class="chip ${loc === k ? 'chon' : ''}" href="#/lead/${k}">${t} <span class="so">${n(dem[k])}</span></a>`).join('')}</div>
     <div class="luoi-ca">${r.ds.map((l) => `<div class="the-ca" style="border-left-color:var(--${TT_LEAD[l.trang_thai][1]}c)">
-      <div class="hang"><span class="nhan ${TT_LEAD[l.trang_thai][1]}">${TT_LEAD[l.trang_thai][0]}</span><span class="mo nho">${KENH[l.kenh] || l.kenh} · ${l.tao}</span></div>
+      <div class="hang"><span class="nhan ${TT_LEAD[l.trang_thai][1]}">${TT_LEAD[l.trang_thai][0]}</span>${l.nguon_qc ? '<span class="nhan cam" title="Khách bấm vào quảng cáo rồi nhắn">Quảng cáo</span>' : ''}
+        <span class="mo nho" style="margin-left:auto">${l.tu_pancake ? 'Pancake' : KENH[l.kenh] || l.kenh} · ${l.tao}</span></div>
       <div class="hang"><span class="ten">${c.esc(l.ten)}</span>${l.hang_muc_ten ? `<span class="nhan" style="margin-left:auto">${c.esc(l.hang_muc_ten)}</span>` : ''}</div>
-      ${l.nhu_cau ? `<div class="phu">${c.esc(l.nhu_cau)}</div>` : ''}
+      ${l.nhu_cau ? `<div class="phu">"${c.esc(l.nhu_cau)}"</div>` : ''}
+      ${l.tu_pancake ? `<div class="phu">${l.so_tin_khach || 0} tin khách nhắn${l.tin_cuoi_vn ? ' · tin cuối ' + l.tin_cuoi_vn : ''}${(l.nhan_pancake || []).length ? ' · nhãn: ' + l.nhan_pancake.map(c.esc).join(', ') : ''}</div>` : ''}
       <div class="phu">${l.du_kien_chup ? 'dự kiến chụp ' + c.ngayVN(l.du_kien_chup) + ' · ' : ''}${l.hen_lien_he ? `<b style="color:${l.hen_lien_he <= c.homNay() && !['da_chot', 'mat'].includes(l.trang_thai) ? 'var(--do)' : 'inherit'}">hẹn nhắn lại ${c.ngayVN(l.hen_lien_he)}</b>` : ''}${l.sale ? ' · ' + c.esc(l.sale) : ''}</div>
       ${l.ly_do_mat ? `<div class="phu" style="color:var(--do)">Mất vì: ${c.esc(l.ly_do_mat)}</div>` : ''}
       <div class="hang-nut">${c.sdtHtml(l.sdt)}<button class="nut phu nho" data-sua="${l.id}">Sửa</button>
