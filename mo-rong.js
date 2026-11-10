@@ -324,14 +324,15 @@ export function moDanhGia(c, hopDong, xong) {
 }
 
 // ═════════ CHẤT LƯỢNG DỊCH VỤ ═════════
-export async function trangChatLuong(c, thang = c.homNay().slice(0, 7)) {
-  const r = await c.kho.ham('crm_chat_luong', { p_thang: thang + '-01' });
+export async function trangChatLuong(c, chu) {
+  const hn = c.homNay(), k = kh.docKhoang(chu, hn), nhan = kh.nhanKhoang(k, hn);
+  const r = await c.kho.ham('crm_chat_luong_khoang', { p_tu: k.tu, p_den: k.den });
   const ta = r.tra_anh;
   const maxSao = Math.max(1, ...Object.values(r.phan_bo).map(n));
-  c.trang.innerHTML = c.dauTrang('Sau chụp', 'Chất lượng dịch vụ', 'Điểm khách chấm, điều khách chưa hài lòng, và trả ảnh có đúng hẹn không — đo bằng số thật, không đoán.', navThang('#/chat-luong', thang)) + `
+  c.trang.innerHTML = c.dauTrang('Sau chụp', 'Chất lượng dịch vụ', `Điểm khách chấm, điều khách chưa hài lòng, và trả ảnh có đúng hẹn không · ${nhan} — đo bằng số thật, không đoán.`, kh.cumKhoang(k, hn, (x) => '#/chat-luong/' + x)) + `
     <div class="so-lieu">
-      ${c.theSo('#/chat-luong', 'tien', ['var(--vang-nhat)', '#8A5A00'], 'Điểm trung bình', r.tb != null ? r.tb + ' ★' : '—', r.so + ' đánh giá trong tháng')}
-      ${c.theSo('#/han-giao', 'lich', ['var(--xanh-nhat)', 'var(--xanh)'], 'Trả ảnh đúng hạn', ta.so ? Math.round((100 * ta.dung_han) / ta.so) + '%' : '—', ta.so ? `${ta.dung_han}/${ta.so} ca trả trong tháng` : 'chưa có ca trả (đo từ 09/11)')}
+      ${c.theSo('#/chat-luong', 'tien', ['var(--vang-nhat)', '#8A5A00'], 'Điểm trung bình', r.tb != null ? r.tb + ' ★' : '—', r.so + ' đánh giá trong kỳ')}
+      ${c.theSo('#/han-giao', 'lich', ['var(--xanh-nhat)', 'var(--xanh)'], 'Trả ảnh đúng hạn', ta.so ? Math.round((100 * ta.dung_han) / ta.so) + '%' : '—', ta.so ? `${ta.dung_han}/${ta.so} ca trả trong kỳ` : 'chưa có ca trả (đo từ 09/11)')}
       ${c.theSo('#/han-giao', 'may', ['var(--tt8n)', 'var(--tt8c)'], 'Chụp → trả ảnh', ta.tb_ngay != null ? ta.tb_ngay + ' ngày' : '—', 'trung bình')}
       ${c.theSo('#/hau-ky', 'canh', ['var(--do-nhat)', 'var(--do)'], 'Ca cần sửa lại', r.can_sua, 'đang mở')}
       ${c.theSo('#/cskh', 'nha', ['var(--nhan-nhat)', 'var(--nhan-dam)'], 'Xin đánh giá', 'CSKH', 'việc tự sinh sau khi trả ảnh')}
@@ -341,9 +342,10 @@ export async function trangChatLuong(c, thang = c.homNay().slice(0, 7)) {
         <div style="flex:1">${thanh((100 * n(r.phan_bo[s])) / maxSao, s >= 4 ? 'var(--xanh)' : s === 3 ? '#C9A227' : 'var(--do)')}</div><b style="width:30px;text-align:right">${n(r.phan_bo[s])}</b></div>`).join('')}</div>
       <div class="the"><h2>Khách chưa hài lòng điều gì</h2>${Object.entries(r.van_de).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<div class="gd"><span>${VAN_DE[k] || k}</span><b>${v}</b></div>`).join('') || '<div class="mo">Chưa ghi nhận vấn đề nào.</div>'}</div>
     </div>
-    <div class="the"><h2>Đánh giá trong tháng</h2>${r.ds.map((d) => `<a class="gd" href="#/ca/${d.hop_dong_id}" style="text-decoration:none"><span><b style="font-weight:600">${c.esc(d.khach)}</b> <span class="mo nho">${d.ma} · ${c.esc(d.goi)} · ${d.luc}</span>
+    <div class="the"><h2>Đánh giá · ${nhan}</h2>${r.ds.map((d) => `<a class="gd" href="#/ca/${d.hop_dong_id}" style="text-decoration:none"><span><b style="font-weight:600">${c.esc(d.khach)}</b> <span class="mo nho">${d.ma} · ${c.esc(d.goi)} · ${d.luc}</span>
       ${d.nhan_xet ? `<br><span class="mo">"${c.esc(d.nhan_xet)}"</span>` : ''}${d.van_de.length ? `<br>${d.van_de.map((v) => `<span class="nhan do">${VAN_DE[v] || v}</span>`).join(' ')}` : ''}</span>
       <b style="color:${d.diem >= 4 ? 'var(--xanh)' : 'var(--do)'}">${'★'.repeat(d.diem)}</b></a>`).join('') || '<div class="trong">Chưa có đánh giá. Ghi ở mục Chăm sóc khách hoặc hồ sơ ca.</div>'}</div>`;
+  kh.ganKhoang(k, hn, (x) => '#/chat-luong/' + x);
 }
 
 // ═════════ CHI CỬA HÀNG ═════════
