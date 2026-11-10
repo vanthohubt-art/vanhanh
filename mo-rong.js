@@ -589,6 +589,56 @@ export async function veHuy(c, h, o, xong) {
   };
 }
 
+// ═════════ HỒ SƠ KHÁCH (028) ═════════
+// #/khach/<id>: mọi lần chụp, tiền, CSKH, lần nhắn hỏi, đánh giá của MỘT khách — khách cũ quay lại thì sale thấy ngay.
+export async function trangKhach(c, id) {
+  const r = await c.kho.ham('crm_ho_so_khach', { p_khach: id });
+  if (!r) { c.trang.innerHTML = '<div class="the">Không thấy khách.</div>'; return; }
+  const k = r.khach, t = r.tong, hn = c.homNay();
+  const tuoi = (ns) => { const th = (Number(hn.slice(0, 4)) - Number(ns.slice(0, 4))) * 12 + Number(hn.slice(5, 7)) - Number(ns.slice(5, 7)) - (hn.slice(8) < ns.slice(8) ? 1 : 0);
+    return th < 24 ? th + ' tháng' : Math.floor(th / 12) + ' tuổi'; };
+  const snToi = (ns) => { let d = hn.slice(0, 4) + ns.slice(4); if (d < hn) d = (Number(hn.slice(0, 4)) + 1) + ns.slice(4); return d; };
+  const tenCskh = (l) => (CSKH[l] || TEN_CSKH_KHAC[l] || [l])[0];
+  const ngay = (d) => (d ? c.ngayVN(d) + '/' + d.slice(0, 4) : '—');
+  c.trang.innerHTML = `
+    <div class="mo" style="margin-bottom:10px"><a href="javascript:history.back()">‹ Quay lại</a></div>
+    <div class="the dau-ca">
+      <div class="hang-nut"><span class="mo">Khách từ ${ngay(k.tao_luc)}</span>${c.coTien() ? `<a class="nut nho" style="margin-left:auto" id="hd-moi" href="#/moi">Lên hợp đồng mới cho khách này</a>` : ''}</div>
+      <h1 style="margin:8px 0 4px">${c.esc(k.ten)}</h1>
+      <div class="hang-nut">${t.so_ca > 1 ? `<span class="nhan">Khách quen · ${t.so_ca} lần chụp</span>` : ''}
+        ${k.ten_be ? `<span class="nhan">Bé ${c.esc(k.ten_be)}${k.ngay_sinh_be ? ' · ' + tuoi(k.ngay_sinh_be) + ' · sinh nhật ' + c.ngayVN(snToi(k.ngay_sinh_be)) : ''}</span>` : ''}
+        ${Number(t.con_no) ? `<span class="nhan do">còn nợ ${c.tien(t.con_no)}</span>` : ''}</div>
+      <div class="hang-nut" style="margin-top:10px">${c.sdtHtml(k.sdt)}${k.sdt ? `<a class="nut phu nho" href="https://zalo.me/${c.esc(k.sdt)}" target="_blank" rel="noopener">Zalo</a>` : ''}</div>
+      ${k.dia_chi ? `<p class="mo" style="margin:8px 0 0">${c.esc(k.dia_chi)}</p>` : ''}${k.ghi_chu ? `<p class="mo" style="margin:4px 0 0">${c.esc(k.ghi_chu)}</p>` : ''}
+    </div>
+    <div class="so-lieu">
+      ${c.theSo('#/khach/' + id, 'ca', ['var(--tt6n)', 'var(--tt6c)'], 'Số lần chụp', t.so_ca, t.so_huy ? t.so_huy + ' HĐ đã huỷ' : 'lần đầu ' + ngay(t.lan_dau))}
+      ${c.theSo('#/khach/' + id, 'lich', ['var(--tt2n)', 'var(--tt2c)'], t.sap_toi ? 'Lịch sắp tới' : 'Lần chụp gần nhất', t.sap_toi ? ngay(t.sap_toi) : ngay(t.lan_cuoi),
+        t.ngay_chua_quay_lai != null ? (t.sap_toi ? 'lần trước ' + ngay(t.lan_cuoi) : t.ngay_chua_quay_lai + ' ngày chưa quay lại') : '')}
+      ${c.coTien() ? c.theSo('#/khach/' + id, 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Tổng đã chi', c.trieu(t.tong_hoa_don), 'đã thu ' + c.trieu(t.da_thu))
+        + c.theSo('#/khach/' + id, 'canh', ['var(--do-nhat)', 'var(--do)'], 'Còn nợ', c.tien(t.con_no), Number(t.con_no) ? 'thu khi khách đến' : 'đã trả đủ') : ''}
+    </div>
+    <div class="ho-so">
+      <div>
+        <div class="the"><h2>Các lần chụp</h2>
+          ${r.hop_dong.map((h) => `<a class="the-ca vien-tt${h.trang_thai}" href="#/ca/${h.id}" style="display:block;margin-bottom:8px">
+            <div class="hang-nut"><b>${ngay(h.ngay)}</b>${h.ngay_cu ? '<span class="mo">(lịch cũ)</span>' : ''}<span class="nhan tt${h.trang_thai}">${h.trang_thai}. ${c.esc(h.tt_ten)}</span>
+              <span class="mo" style="margin-left:auto">${c.esc(h.ma)}</span></div>
+            <div class="mo" style="margin-top:4px">${c.esc(h.goi)}${c.coTien() ? ' · ' + c.tien(h.tong) + (Number(h.con_lai) ? ` · <b style="color:var(--do)">còn ${c.tien(h.con_lai)}</b>` : '') : ''}${h.so_cu ? ' · sổ cũ' : ''}</div></a>`).join('') || '<div class="mo">Chưa có hợp đồng.</div>'}
+        </div>
+        ${r.danh_gia.length ? `<div class="the"><h2>Khách đánh giá</h2>${r.danh_gia.map((d) => `<div style="padding:4px 0"><b>${'★'.repeat(d.diem)}${'☆'.repeat(5 - d.diem)}</b> <span class="mo">${d.luc_vn} · ${c.esc(d.ma)}</span>${d.nhan_xet ? `<div>${c.esc(d.nhan_xet)}</div>` : ''}</div>`).join('')}</div>` : ''}
+      </div>
+      <div>
+        <div class="the"><h2>Chăm sóc khách</h2>
+          <div class="cuon-doc" style="max-height:320px">${r.cskh.map((x) => `<div style="padding:4px 0"><span class="mo">${x.luc_vn} · ${c.esc(x.ai)}${x.ma ? ' · ' + c.esc(x.ma) : ''}</span><div><b>${c.esc(tenCskh(x.loai))}</b>${x.noi_dung ? ' — ' + c.esc(x.noi_dung) : ''}${x.ket_qua ? ` <span class="mo">→ ${c.esc(x.ket_qua)}</span>` : ''}</div></div>`).join('') || '<div class="mo">Chưa ghi lần chăm sóc nào.</div>'}</div></div>
+        <div class="the"><h2>Các lần nhắn hỏi</h2>
+          ${r.lead.map((l) => `<div style="padding:4px 0"><span class="mo">${l.tao_vn} · ${KENH[l.kenh] || c.esc(l.kenh)}${l.nguon_qc ? ' · từ quảng cáo' : ''}</span>${l.nhu_cau ? `<div>${c.esc(l.nhu_cau)}</div>` : ''}</div>`).join('') || '<div class="mo">Không thấy lần nhắn hỏi nào (khách chưa có SĐT trong Khách tiềm năng).</div>'}</div>
+      </div>
+    </div>`;
+  const nut = c.trang.querySelector('#hd-moi');
+  if (nut) nut.onclick = () => sessionStorage.setItem('khach-moi', JSON.stringify({ sdt: k.sdt || '', ten: k.ten }));
+}
+
 // ═════════ SỬA HỢP ĐỒNG (027) ═════════
 // Gói · giá · giảm · sale online · tên/SĐT/địa chỉ khách. Chỉ gửi lên ô THẬT SỰ đổi; máy chủ chặn lại lần nữa.
 export function moSuaHd(c, h, chonGoiHtml, xong) {

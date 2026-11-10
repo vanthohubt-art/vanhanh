@@ -2,9 +2,9 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261110h';
+import * as kho from './kho.js?v=20261110i';
 import { moHoaDon, moQrThu } from './hoa-don.js?v=20261110h';
-import * as mr from './mo-rong.js?v=20261110h';
+import * as mr from './mo-rong.js?v=20261110i';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
@@ -279,6 +279,12 @@ async function trangMoi(ngayGoiY = '') {
     if (k && !$('#ten').value) $('#ten').value = k.ten;
     if (k) $('#nguon').value = 'khach_cu';
   });
+  const khachMoi = JSON.parse(sessionStorage.getItem('khach-moi') || 'null');   // 028: bấm từ hồ sơ khách
+  if (khachMoi && !lead) {
+    sessionStorage.removeItem('khach-moi');
+    $('#sdt').value = khachMoi.sdt; $('#ten').value = khachMoi.ten; $('#nguon').value = 'khach_cu';
+    if (khachMoi.sdt) $('#sdt').onblur();
+  }
   $('#goi').onchange = () => {
     const g = DM.goi.find((x) => x.ma === $('#goi').value);
     $('#gia').value = g ? g.gia_ban : '';
@@ -332,7 +338,7 @@ async function trangCa(id) {
         <span class="mo">${h.ngay_chup ? `${THU_DAI[thuCua(h.ngay_chup)]}, ${ngayVN(h.ngay_chup)}/${h.ngay_chup.slice(0, 4)}` : 'Chưa có ngày chụp'}</span>
         <span class="mo" style="margin-left:auto">Hợp đồng <b>${h.ma}</b></span>${coTien() && h.trang_thai !== 9 ? '<button class="nut phu nho" id="sua-hd">Sửa</button>' : ''}
       </div>
-      <h1 style="margin:8px 0 4px">${esc(h.khach)}</h1>
+      <h1 style="margin:8px 0 4px"><a href="#/khach/${h.khach_id}" style="color:inherit" title="Hồ sơ khách — mọi lần chụp">${esc(h.khach)}</a></h1>
       <div class="hang-nut">${nhanTT(h.trang_thai, h.trang_thai_ten)} <span class="nhan">${esc(h.goi_ten)}</span> ${NGUON[h.nguon] ? `<span class="nhan">${NGUON[h.nguon]}</span>` : ''}
         ${h.hen_tra_anh ? `<span class="nhan ${quaHen ? 'do' : ''}">hẹn trả ${ngayVN(h.hen_tra_anh)}${quaHen ? ' · quá hẹn' : ''}</span>` : ''} ${h.can_sua_lai ? '<span class="nhan do">cần sửa lại</span>' : ''}</div>
       <div class="hang-nut" style="margin-top:10px">${sdtHtml(h.sdt)}${h.sdt ? `<a class="nut phu nho" href="https://zalo.me/${esc(h.sdt)}" target="_blank" rel="noopener">Zalo</a>` : ''}</div>
@@ -645,11 +651,11 @@ function veMenu() {
 }
 async function dieuHuong() {
   const h = location.hash.replace(/^#\/?/, ''), [p0, p1, p2] = h.split('/');
-  const trang = p0 === 'ca' ? 'tim' : p0 || '';
+  const trang = p0 === 'ca' || p0 === 'khach' ? 'tim' : p0 || '';
   document.querySelectorAll('#menu a').forEach((a) => a.classList.toggle('dang', a.dataset.trang === trang));
   const m = MENU.find((x) => x.tt === trang && !x.nhom);
   const nhom = (() => { let g = 'HOME STUDIO'; for (const x of MENU) { if (x.nhom) g = x.nhom.toUpperCase(); if (x === m) return g; } return 'HOME STUDIO'; })();
-  $('#tieu-de').innerHTML = `<small>${m ? nhom : 'HOME STUDIO'}</small><b>${p0 === 'ca' ? 'Hồ sơ ca' : m ? m.ten : 'Trang chủ'}</b>`;
+  $('#tieu-de').innerHTML = `<small>${m ? nhom : 'HOME STUDIO'}</small><b>${p0 === 'ca' ? 'Hồ sơ ca' : p0 === 'khach' ? 'Hồ sơ khách' : m ? m.ten : 'Trang chủ'}</b>`;
   document.body.classList.remove('mo-menu');
   window.scrollTo(0, 0);
   await chay(async () => {
@@ -657,6 +663,7 @@ async function dieuHuong() {
     else if (p0 === 'moi') await trangMoi(p1 || '');
     else if (p0 === 'lich') await trangLich(p1 || homNay(), p2 || 'ngay');
     else if (p0 === 'ca') await trangCa(Number(p1));
+    else if (p0 === 'khach') await mr.trangKhach(ctx(), Number(p1));
     else if (p0 === 'tim') await trangTim(p1 ? decodeURIComponent(p1) : '');
     else if (p0 === 'hau-ky') await trangHauKy();
     else if (p0 === 'cong-no') await trangCongNo(p1 || undefined);
