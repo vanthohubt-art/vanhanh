@@ -197,3 +197,10 @@ td.so, th.so { text-align: right; white-space: nowrap; font-variant-numeric: tab
 .o-anh.chon-duoc { cursor: pointer; position: relative; } .o-anh.chon-duoc.chon { outline: 3px solid var(--nhan); outline-offset: -3px; }
 .o-anh.chon-duoc.chon::after { content: "✓"; position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; background: var(--nhan); color: #fff; display: grid; place-items: center; font-weight: 800; }
 .hop .luoi-anh { max-height: 60vh; overflow-y: auto; }
+
+/* Chọn kỳ xem (khoang.js) */
+.cum-khoang { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.hop-khoang { flex-basis: 440px; }
+.luoi-thang { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 8px; }
+.luoi-thang .chip { margin: 0; justify-content: center; }
+.luoi-thang .chip.mo:not(.chon) { opacity: .45; }

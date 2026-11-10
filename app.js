@@ -2,9 +2,10 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261109n';
+import * as kho from './kho.js?v=20261110b';
 import { moHoaDon, moQrThu } from './hoa-don.js?v=20261109m';
-import * as mr from './mo-rong.js?v=20261109n';
+import * as mr from './mo-rong.js?v=20261110b';
+import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
 const tien = (n) => (Math.round(Number(n) || 0)).toLocaleString('vi-VN') + 'đ';
@@ -96,7 +97,7 @@ const theSo = (href, icon, mau, nhan, so, phu) => `<a class="o-so" href="${href}
 
 function theCa(h, phu = '') {
   return `<a class="the-ca vien-tt${h.trang_thai}" href="#/ca/${h.id}">
-    <div class="hang"><span class="gio">${h.ngay_chup ? `${h.gio_chup || ''} ${THU[thuCua(h.ngay_chup)]}, ${ngayVN(h.ngay_chup)}` : 'Chưa có lịch'}</span>${nhanTT(h.trang_thai, h.trang_thai_ten || tenTT(h.trang_thai))}</div>
+    <div class="hang"><span class="gio">${h.ngay_chup ? `${h.gio_chup || ''} ${THU[thuCua(h.ngay_chup)]}, ${ngayVN(h.ngay_chup)}${h.ngay_chup.slice(0, 4) !== homNay().slice(0, 4) ? '/' + h.ngay_chup.slice(0, 4) : ''}` : h.so_cu ? `Sổ không ghi ngày${h.thang_so ? ' · tháng ' + h.thang_so : ''}` : 'Chưa có lịch'}</span>${nhanTT(h.trang_thai, h.trang_thai_ten || tenTT(h.trang_thai))}</div>
     <div class="hang"><span class="ten">${esc(h.khach)}</span>${h.tong_hoa_don != null ? `<span class="tien">${tien(h.tong_hoa_don)}</span>` : ''}</div>
     <div class="phu">${esc(h.goi)} · ${h.ma}${h.hen_tra_anh ? ' · hẹn trả ' + ngayVN(h.hen_tra_anh) : ''}</div>
     <div class="hang">${sdtHtml(h.sdt)}<span style="margin-left:auto">${h.con_lai ? `<span class="nhan do">còn ${tien(h.con_lai)}</span>` : h.tien_thua ? `<span class="nhan vang">thừa ${tien(h.tien_thua)}</span>` : h.tong_hoa_don != null ? '<span class="nhan xanh">đã đủ</span>' : ''}</span></div>
@@ -518,18 +519,19 @@ async function trangHauKy() {
 // ═════════ CÔNG NỢ & THU TIỀN ═════════
 const GIAI_DOAN = [['thu_khi_chup', 'Thu khi chụp', 'Có lịch, chưa chụp', 'var(--tt8c)'], ['truoc_giao', 'Thu trước khi giao ảnh', 'Đã chụp, chưa giao', 'var(--tt3c)'],
   ['da_giao', 'Đã giao ảnh vẫn nợ', 'Gọi khách thanh toán', 'var(--do)'], ['chua_lich', 'Chưa có lịch chụp', 'Thu khi chốt lịch', 'var(--chu-nhat)']];
-async function trangCongNo(thang = homNay().slice(0, 7)) {
-  const r = await kho.congNo(thang + '-01');
-  const t = r.thu, ss = r.thu_thang_truoc ? Math.round((t.tien / r.thu_thang_truoc - 1) * 100) : null;
-  const thangTruoc = (() => { const d = new Date(thang + '-15T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
-  const thangSau = (() => { const d = new Date(thang + '-15T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + 1); return d.toISOString().slice(0, 7); })();
+// Kỳ xem chọn tự do (tháng · năm · quý · từ ngày đến ngày) — khoang.js. Link cũ "#/cong-no/2026-11" vẫn chạy.
+async function trangCongNo(chu) {
+  const hn = homNay(), k = kh.docKhoang(chu, hn), nhan = kh.nhanKhoang(k, hn), diaChi = (c) => '#/cong-no/' + c;
+  const r = await kho.congNoKhoang(k.tu, k.den);
+  const t = r.thu, ss = r.thu_ky_truoc ? Math.round((t.tien / r.thu_ky_truoc - 1) * 100) : null;
+  const tenKyTruoc = { thang: 'tháng trước', nam: 'năm trước', quy: 'quý trước' }[k.kieu] || 'kỳ trước cùng độ dài';
   const pCK = t.tien ? Math.round((t.ck / t.tien) * 100) : 0;
   $('#trang').innerHTML = dauTrang('Sổ thu · công nợ', 'Thu tiền & đối soát', 'Mỗi lần khách trả là một phiếu thu riêng. Nợ chia theo giai đoạn để biết thu lúc nào.',
-    `<a class="nut phu nho" href="#/cong-no/${thangTruoc}">‹</a><span class="nut phu nho" style="cursor:default">Tháng ${thang.slice(5)}/${thang.slice(0, 4)}</span><a class="nut phu nho" href="#/cong-no/${thangSau}">›</a>`) + `
+    kh.cumKhoang(k, hn, diaChi)) + `
     <div class="ba-the">
-      <div class="the"><div class="mo">Đã thu · tháng ${thang.slice(5)}/${thang.slice(0, 4)}</div>
+      <div class="the"><div class="mo">Đã thu · ${nhan}</div>
         <div class="so-to" style="color:var(--xanh)">${tien(t.tien)}</div>
-        <div class="mo">${t.so} phiếu thu${ss != null ? ` · <b style="color:${ss >= 0 ? 'var(--xanh)' : 'var(--do)'}">${ss >= 0 ? '▲' : '▼'} ${Math.abs(ss)}%</b> so với tháng trước` : ''}</div>
+        <div class="mo">${t.so} phiếu thu${ss != null ? ` · <b style="color:${ss >= 0 ? 'var(--xanh)' : 'var(--do)'}">${ss >= 0 ? '▲' : '▼'} ${Math.abs(ss)}%</b> so với ${tenKyTruoc}` : ''}</div>
         <div class="thanh-ty-le"><i style="width:${pCK}%;background:var(--tt8c)"></i><i style="width:${100 - pCK}%;background:var(--nhan)"></i></div>
         <div class="hai"><div><span class="mo">● Chuyển khoản</span><br><b>${tien(t.ck)}</b><br><span class="mo nho">${t.so_ck} phiếu · ${pCK}%</span></div>
           <div><span class="mo" style="color:var(--nhan)">● Tiền mặt</span><br><b>${tien(t.tm)}</b><br><span class="mo nho">${t.so_tm} phiếu · ${100 - pCK}%</span></div></div>
@@ -537,20 +539,21 @@ async function trangCongNo(thang = homNay().slice(0, 7)) {
       <div class="the"><div class="mo">Còn phải thu</div>
         <div class="so-to" style="color:var(--do)">${tien(r.con_no.tien)}</div>
         <div class="mo">${r.con_no.so} hợp đồng còn nợ · chia theo giai đoạn</div>
-        ${GIAI_DOAN.map(([k, ten, mo, mau]) => { const g = r.giai_doan[k] || { tien: 0, so: 0 };
-          return `<a class="gd" href="#/cong-no/${thang}/${k}" style="text-decoration:none"><span style="width:10px;height:10px;border-radius:50%;background:${mau}"></span><span><b style="font-weight:600">${ten}</b><br><span class="mo nho">${mo} · ${g.so} HĐ</span></span><b>${trieu(g.tien)}</b></a>`; }).join('')}</div>
+        ${GIAI_DOAN.map(([gd, ten, mo, mau]) => { const g = r.giai_doan[gd] || { tien: 0, so: 0 };
+          return `<a class="gd" href="#/cong-no/${k.chu}/${gd}" style="text-decoration:none"><span style="width:10px;height:10px;border-radius:50%;background:${mau}"></span><span><b style="font-weight:600">${ten}</b><br><span class="mo nho">${mo} · ${g.so} HĐ</span></span><b>${trieu(g.tien)}</b></a>`; }).join('')}</div>
       <div class="the"><div class="mo">Theo loại dịch vụ</div>
         <div class="cuon-doc" style="max-height:300px">${r.hang_muc.map((h) => `<div class="gd"><span><b style="font-weight:600">${esc(h.ten)}</b><br><span class="mo nho">đã thu ${trieu(h.da_thu)} · ${h.so_phieu} phiếu</span></span>
           <b style="color:${h.con_no ? 'var(--do)' : 'var(--xanh)'}">${h.con_no ? 'nợ ' + trieu(h.con_no) : 'đủ'}</b></div>`).join('') || '<div class="mo">Chưa có số.</div>'}</div></div>
     </div>
     <div class="hai-cot deu">
-      <div class="the"><div class="dau-the"><div><h2>Sổ phiếu thu</h2><div class="mo">${r.phieu.length} phiếu · tháng ${thang.slice(5)}/${thang.slice(0, 4)}</div></div></div>
+      <div class="the"><div class="dau-the"><div><h2>Sổ phiếu thu</h2><div class="mo">${r.phieu.length} phiếu · ${nhan}</div></div></div>
         <div id="loc-phieu"><span class="chip chon" data-ht="">Tất cả</span><span class="chip" data-ht="chuyen_khoan">Chuyển khoản</span><span class="chip" data-ht="tien_mat">Tiền mặt</span></div>
         <div class="cuon-doc" id="ds-phieu"></div></div>
       <div class="the"><div class="dau-the"><div><h2>Danh sách cần thu</h2><div class="mo">${r.con_no.so} hợp đồng · ${tien(r.con_no.tien)}</div></div></div>
         <div id="loc-no"><span class="chip" data-gd="">Tất cả</span>${GIAI_DOAN.map(([k, ten]) => `<span class="chip" data-gd="${k}">${ten} <span class="so">${(r.giai_doan[k] || {}).so || 0}</span></span>`).join('')}</div>
         <div class="cuon-doc" id="ds-no"></div></div>
     </div>`;
+  kh.ganKhoang(k, hn, diaChi);
   const vePhieu = (ht) => {
     const ds = r.phieu.filter((p) => !ht || p.hinh_thuc === ht);
     $('#ds-phieu').innerHTML = ds.map((p) => `<a class="dong-phieu" href="#/ca/${p.hop_dong_id}"><span class="ht ${p.hinh_thuc === 'tien_mat' ? 'tm' : ''}">${p.hinh_thuc === 'tien_mat' ? 'TM' : 'CK'}</span>

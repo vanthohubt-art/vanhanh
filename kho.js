@@ -7,7 +7,7 @@ import { SUPABASE_URL, SUPABASE_KHOA_CONG_KHAI } from './cau-hinh.js?v=20261109h
 export const THAT = !!(SUPABASE_URL && SUPABASE_KHOA_CONG_KHAI) && !new URLSearchParams(location.search).has('thu');
 let db, sb;
 const so = (v) => (v == null ? 0 : Number(v));
-const SQL_THU = ['../db/001-bang.sql', '../db/002-danh-muc.sql', '../db/004-ham-app.sql', '../db/007-ham-tong-quan.sql', '../db/008-mo-rong.sql', '../db/009-pancake-lead.sql', '../db/010-album.sql', '../db/011-luong.sql', '../db/012-make-ngoai.sql', '../db/013-nhip.sql', '../db/014-dang-bai.sql', '../db/015-viec-cua-toi.sql', '../db/016-bao-cao-khoang.sql', '../db/017-thieu-hen.sql'];
+const SQL_THU = ['../db/001-bang.sql', '../db/002-danh-muc.sql', '../db/004-ham-app.sql', '../db/007-ham-tong-quan.sql', '../db/008-mo-rong.sql', '../db/009-pancake-lead.sql', '../db/010-album.sql', '../db/011-luong.sql', '../db/012-make-ngoai.sql', '../db/013-nhip.sql', '../db/014-dang-bai.sql', '../db/015-viec-cua-toi.sql', '../db/016-bao-cao-khoang.sql', '../db/017-thieu-hen.sql', '../db/019-tim-theo-ngay.sql', '../db/020-cong-no-khoang.sql'];
 const docSql = async (f) => (await fetch(f, { cache: 'no-store' })).text();
 
 export async function moKho(ten = 'crm-home-studio') {
@@ -23,7 +23,7 @@ export async function moKho(ten = 'crm-home-studio') {
   if (!rows[0].co) for (const f of SQL_THU) await db.exec(await docSql(f));
   else if (!rows[0].co_ham) await db.exec(await docSql('../db/004-ham-app.sql'));   // sổ thử cũ (trước 08/11) chưa có hàm
   // 007 toàn "create or replace" ⇒ nạp lại mỗi lần mở để sổ thử cũ luôn có bản hàm mới nhất.
-  if (rows[0].co) for (const f of ['../db/007-ham-tong-quan.sql', '../db/008-mo-rong.sql', '../db/009-pancake-lead.sql', '../db/010-album.sql', '../db/011-luong.sql', '../db/012-make-ngoai.sql', '../db/013-nhip.sql', '../db/014-dang-bai.sql', '../db/015-viec-cua-toi.sql', '../db/016-bao-cao-khoang.sql', '../db/017-thieu-hen.sql']) await db.exec(await docSql(f));
+  if (rows[0].co) for (const f of ['../db/007-ham-tong-quan.sql', '../db/008-mo-rong.sql', '../db/009-pancake-lead.sql', '../db/010-album.sql', '../db/011-luong.sql', '../db/012-make-ngoai.sql', '../db/013-nhip.sql', '../db/014-dang-bai.sql', '../db/015-viec-cua-toi.sql', '../db/016-bao-cao-khoang.sql', '../db/017-thieu-hen.sql', '../db/019-tim-theo-ngay.sql', '../db/020-cong-no-khoang.sql']) await db.exec(await docSql(f));
 }
 
 export async function xoaSachVaNapLai() {
@@ -159,6 +159,14 @@ export async function trangChu(thang) {
   const r = await goi('crm_trang_chu', { p_thang: thang || null });
   ['hd_moi', 'thuc_thu', 'cong_no'].forEach((k) => soHoa(r[k]));
   r.lich_hom_nay.forEach(soHoa);
+  return r;
+}
+export async function congNoKhoang(tu, den) {
+  const r = await goi('crm_cong_no_khoang', { p_tu: tu, p_den: den });
+  soHoa(r.thu); r.thu.hom_nay = so(r.thu.hom_nay); r.thu_ky_truoc = so(r.thu_ky_truoc); soHoa(r.con_no);
+  for (const g of Object.values(r.giai_doan)) soHoa(g);
+  r.hang_muc.forEach((h) => { h.da_thu = so(h.da_thu); h.con_no = so(h.con_no); });
+  r.phieu.forEach(soHoa); r.can_thu.forEach(soHoa);
   return r;
 }
 export async function congNo(thang) {
