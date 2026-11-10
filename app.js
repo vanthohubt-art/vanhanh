@@ -3,7 +3,7 @@
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
 import * as kho from './kho.js?v=20261110i';
-import { moHoaDon, moQrThu } from './hoa-don.js?v=20261110h';
+import { moHoaDon, moQrThu } from './hoa-don.js?v=20261110k';
 import * as mr from './mo-rong.js?v=20261110i';
 import * as kh from './khoang.js?v=20261110b';
 

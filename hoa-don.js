@@ -11,7 +11,7 @@ const STUDIO = {
   diaChi: '79 Hà Huy Tập, Yên Viên, Gia Lâm, Hà Nội',
   lienHe: 'Hotline / Zalo 0961 818 905',
 };
-const MAU = { nen: '#FBF7F2', the: '#FFFFFF', chu: '#2B211B', nhat: '#6E5F55', vien: '#E6DACC', nhan: '#B4532A', xanh: '#3F7A55', do: '#B3261E' };
+const MAU = { nen: '#F5FBFA', the: '#FFFFFF', chu: '#17302B', nhat: '#5A6F6A', vien: '#DCEDE8', nhan: '#0E8571', xanh: '#2E7D32', do: '#B3261E' };   // tông trắng · xanh mint (anh Thọ 10/11/2026), khớp app.css
 const PHONG = '"Be Vietnam Pro", "Segoe UI", system-ui, sans-serif';
 const W = 1080, LE = 72;
 
