@@ -204,3 +204,7 @@ td.so, th.so { text-align: right; white-space: nowrap; font-variant-numeric: tab
 .luoi-thang { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 8px; }
 .luoi-thang .chip { margin: 0; justify-content: center; }
 .luoi-thang .chip.mo:not(.chon) { opacity: .45; }
+
+/* 027: cặp phiếu thu gõ nhầm / phiếu huỷ */
+tr.phieu-huy td { text-decoration: line-through; opacity: .6; }
+tr.phieu-huy td a, tr.phieu-huy td b { text-decoration: none; }

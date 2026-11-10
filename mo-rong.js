@@ -589,6 +589,65 @@ export async function veHuy(c, h, o, xong) {
   };
 }
 
+// ═════════ SỬA HỢP ĐỒNG (027) ═════════
+// Gói · giá · giảm · sale online · tên/SĐT/địa chỉ khách. Chỉ gửi lên ô THẬT SỰ đổi; máy chủ chặn lại lần nữa.
+export function moSuaHd(c, h, chonGoiHtml, xong) {
+  const soCu = !!h.ma_cu, sale = c.DM.nhanSu.filter((n) => n.vai.includes('sale_online') || n.vai.includes('chu'));
+  const khoaTien = soCu || h.trang_thai === 9 || (h.trang_thai === 8 && !c.laChu());
+  const hp = hop(c, 'Sửa hợp đồng ' + h.ma, `
+    <h3 style="margin:0 0 6px">Khách</h3>
+    <div class="hai"><label>Tên khách<input id="s-ten" value="${c.esc(h.khach || '')}"></label>
+      <label>SĐT<input id="s-sdt" inputmode="tel" value="${c.esc(h.sdt || '')}"></label></div>
+    <label style="margin-top:8px">Địa chỉ<input id="s-dc" value="${c.esc(h.dia_chi || '')}"></label>
+    <p class="mo nho" style="margin:4px 0 12px">Sửa ở đây là sửa hồ sơ khách — mọi hợp đồng của khách này cùng đổi.</p>
+    <h3 style="margin:0 0 6px">Gói & giá</h3>
+    ${soCu ? '<p class="mo" style="margin:0 0 6px">Ca nhập từ sổ Sheet — đổi gói/giá trên sổ, tối máy đối chiếu sẽ cập nhật.</p>'
+      : khoaTien && h.trang_thai === 8 ? '<p class="mo" style="margin:0 0 6px">Ca đã hoàn thành — chỉ anh Thọ sửa giá.</p>' : ''}
+    <label>Gói<select id="s-goi" ${khoaTien ? 'disabled' : ''}>${chonGoiHtml(h.goi_ma)}</select></label>
+    <div class="hai" style="margin-top:8px"><label>Giá gói<input id="s-gia" type="number" min="0" step="1000" value="${h.gia_goi ?? ''}" ${khoaTien ? 'disabled' : ''}></label>
+      <label>Giảm giá<input id="s-giam" type="number" min="0" step="1000" value="${h.giam_gia || 0}" ${khoaTien ? 'disabled' : ''}></label></div>
+    <label style="margin-top:8px">Sale chốt (online)<select id="s-sale" ${c.laChu() ? '' : 'disabled'}><option value="">—</option>${sale.map((n) => `<option value="${n.id}" ${n.id === h.sale_online_id ? 'selected' : ''}>${c.esc(n.ten)}</option>`).join('')}</select></label>
+    ${c.laChu() ? '' : '<p class="mo nho" style="margin:4px 0 0">Đổi sale online (người hưởng hoa hồng) — chỉ anh Thọ.</p>'}
+    <div class="hang-nut" style="margin-top:12px"><button class="nut" id="s-luu">Lưu</button></div>`);
+  const g = hp.g;
+  g.querySelector('#s-goi').onchange = () => {
+    const x = c.DM.goi.find((z) => z.ma === giaTri(g, '#s-goi'));
+    if (x) g.querySelector('#s-gia').value = x.gia_ban;
+  };
+  g.querySelector('#s-luu').onclick = () => c.chay(async () => {
+    const d = {};
+    if (giaTri(g, '#s-ten') !== (h.khach || '')) d.khach_ten = giaTri(g, '#s-ten');
+    if (giaTri(g, '#s-sdt') !== (h.sdt || '')) d.khach_sdt = giaTri(g, '#s-sdt');
+    if (giaTri(g, '#s-dc') !== (h.dia_chi || '')) d.khach_dia_chi = giaTri(g, '#s-dc');
+    if (!khoaTien) {
+      const goi = giaTri(g, '#s-goi');
+      if (goi && goi !== h.goi_ma) d.goi_ma = goi;
+      if (Number(giaTri(g, '#s-gia')) !== Number(h.gia_goi)) d.gia_goi = giaTri(g, '#s-gia');
+      if (Number(giaTri(g, '#s-giam') || 0) !== Number(h.giam_gia || 0)) d.giam_gia = giaTri(g, '#s-giam');
+    }
+    const so = giaTri(g, '#s-sale');
+    if (c.laChu() && (so ? Number(so) : null) !== (h.sale_online_id ?? null)) d.sale_online_id = so ? Number(so) : null;
+    if (!Object.keys(d).length) { hp.dong(); return; }
+    await c.kho.ham('crm_sua_hop_dong', { p_id: h.id, d, p_ai: c.toi });
+    hp.dong(); c.bao('Đã sửa hợp đồng'); xong();
+  });
+}
+
+// Huỷ phiếu thu ghi nhầm (027): hỏi lý do, máy ghi phiếu đảo cùng thời điểm thu.
+export function moHuyPhieu(c, p, xong) {
+  const hp = hop(c, 'Huỷ phiếu thu', `
+    <p style="margin:0 0 8px">${p.so_tien < 0 ? 'Phiếu hoàn' : 'Phiếu thu'} <b>${c.tien(Math.abs(p.so_tien))}</b> · ${c.esc(p.luc)} · ${p.hinh_thuc === 'tien_mat' ? 'tiền mặt' : 'chuyển khoản'}</p>
+    <label>Lý do (bắt buộc)<input id="hp-ly" placeholder="Gõ nhầm số · ghi nhầm ca · khách chưa chuyển…"></label>
+    <p class="mo nho" style="margin:6px 0 0">Máy ghi một phiếu đảo đúng số này, cùng ngày thu của phiếu gốc, nên sổ thu ngày đó tự đúng lại. Cả hai phiếu vẫn nằm trong lịch sử. Thu đúng số thì ghi phiếu mới.</p>
+    <div class="hang-nut" style="margin-top:12px"><button class="nut" id="hp-luu" style="background:var(--do)">Huỷ phiếu</button></div>`);
+  hp.g.querySelector('#hp-luu').onclick = () => c.chay(async () => {
+    const ly = giaTri(hp.g, '#hp-ly');
+    if (!ly) { c.bao('Ghi lý do huỷ phiếu', true); return; }
+    await c.kho.ham('crm_huy_phieu_thu', { p_phieu: p.id, p_ly_do: ly, p_ai: c.toi });
+    hp.dong(); c.bao('Đã huỷ phiếu'); xong();
+  });
+}
+
 export async function veHoSoThem(c, h, chua) {
   const t = await c.kho.ham('crm_ca_them', { p_id: h.id, p_ai: c.toi });
   const am = (loai) => t.anh_mau.filter((a) => a.loai === loai);

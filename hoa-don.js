@@ -34,7 +34,7 @@ export function dongHoaDon(h) {
   const hang = [{ ten: `Gói ${h.goi_ten}`, so: h.tien.tien_goi + (h.giam_gia || 0) }];
   if (h.giam_gia) hang.push({ ten: 'Giảm giá', so: -h.giam_gia });
   for (const p of h.phatSinh || []) hang.push({ ten: p.mo_ta + (p.so_luong > 1 ? ` × ${p.so_luong}` : ''), so: p.thanh_tien });
-  const thu = (h.phieuThu || []).map((p) => ({
+  const thu = (h.phieuThu || []).filter((p) => !p.huy && !p.dao).map((p) => ({
     ten: `${p.so_tien < 0 ? 'Hoàn tiền' : 'Đã thu'} ${String(p.luc || '').slice(0, 5)} ·${p.hinh_thuc === 'tien_mat' ? 'tiền mặt' : 'chuyển khoản'}`,
     so: -p.so_tien,
   }));

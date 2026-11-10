@@ -2,9 +2,9 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261110g';
-import { moHoaDon, moQrThu } from './hoa-don.js?v=20261109m';
-import * as mr from './mo-rong.js?v=20261110g';
+import * as kho from './kho.js?v=20261110h';
+import { moHoaDon, moQrThu } from './hoa-don.js?v=20261110h';
+import * as mr from './mo-rong.js?v=20261110h';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
@@ -317,6 +317,11 @@ async function trangMoi(ngayGoiY = '') {
 async function trangCa(id) {
   const h = await kho.chiTiet(id);
   if (!h) { $('#trang').innerHTML = '<div class="the">Không thấy hợp đồng.</div>'; return; }
+  try {   // 027: cặp phiếu gõ nhầm / phiếu huỷ — gạch ngang, không in lên hoá đơn khách
+    const ph = await kho.ham('crm_phieu_huy', { p_id: id }), goc = new Set(ph.map((x) => x.goc)), dao = new Set(ph.map((x) => x.dao));
+    h.phieuThu.forEach((p) => { p.huy = goc.has(p.id); p.dao = dao.has(p.id); });
+  } catch { /* máy chủ chưa có 027 */ }
+  const huyDuoc = (p) => coTien() && h.trang_thai !== 9 && !p.huy && !p.dao && !(p.ghi_chu || '').startsWith('Cột "Đặt cọc/Thanh toán" của sổ cũ') && p.ghi_chu !== 'Hoàn cọc khi huỷ hợp đồng';
   const cos = [...new Set(DM.giaIn.map((g) => g.co))];
   const quaHen = h.hen_tra_anh && h.hen_tra_anh < homNay() && h.trang_thai < 8;
   $('#trang').innerHTML = `
@@ -325,7 +330,7 @@ async function trangCa(id) {
       <div class="hang-nut" style="align-items:flex-end;gap:14px">
         <span class="gio-lon">${h.gio_chup || '--:--'}</span>
         <span class="mo">${h.ngay_chup ? `${THU_DAI[thuCua(h.ngay_chup)]}, ${ngayVN(h.ngay_chup)}/${h.ngay_chup.slice(0, 4)}` : 'Chưa có ngày chụp'}</span>
-        <span class="mo" style="margin-left:auto">Hợp đồng <b>${h.ma}</b></span>
+        <span class="mo" style="margin-left:auto">Hợp đồng <b>${h.ma}</b></span>${coTien() && h.trang_thai !== 9 ? '<button class="nut phu nho" id="sua-hd">Sửa</button>' : ''}
       </div>
       <h1 style="margin:8px 0 4px">${esc(h.khach)}</h1>
       <div class="hang-nut">${nhanTT(h.trang_thai, h.trang_thai_ten)} <span class="nhan">${esc(h.goi_ten)}</span> ${NGUON[h.nguon] ? `<span class="nhan">${NGUON[h.nguon]}</span>` : ''}
@@ -364,7 +369,7 @@ async function trangCa(id) {
             <tr><td>Gói ${esc(h.goi_ten)}${h.giam_gia ? ` (giảm ${tien(h.giam_gia)})` : ''}</td><td class="so">${tien(h.tien.tien_goi)}</td></tr>
             ${h.phatSinh.map((p) => `<tr><td>${esc(p.mo_ta)}${p.so_luong > 1 ? ' × ' + p.so_luong : ''}${coTien() ? ` <a href="#" data-xoa="${p.id}" class="mo">xoá</a>` : ''}</td><td class="so">${tien(p.thanh_tien)}</td></tr>`).join('')}
             <tr class="tong"><td>Tổng hoá đơn</td><td class="so">${tien(h.tien.tong_hoa_don)}</td></tr>
-            ${h.phieuThu.map((p) => `<tr><td class="mo">${p.so_tien < 0 ? 'Hoàn' : 'Đã thu'} ${p.luc} · ${p.hinh_thuc === 'tien_mat' ? 'tiền mặt' : 'chuyển khoản'}${p.ghi_chu ? ' · ' + esc(p.ghi_chu) : ''}</td><td class="so">${tien(-p.so_tien)}</td></tr>`).join('')}
+            ${h.phieuThu.map((p) => `<tr${p.huy || p.dao ? ' class="phieu-huy"' : ''}><td class="mo">${p.dao ? 'Huỷ phiếu' : p.so_tien < 0 ? 'Hoàn' : 'Đã thu'} ${p.luc} · ${p.hinh_thuc === 'tien_mat' ? 'tiền mặt' : 'chuyển khoản'}${p.ghi_chu && !p.dao ? ' · ' + esc(p.ghi_chu) : ''}${p.dao ? ' · ' + esc((p.ghi_chu || '').replace(/^Huỷ phiếu [0-9/]+ [0-9]+:[0-9]+: /, '')) : ''}${p.huy ? ' · <b>đã huỷ</b>' : ''}${huyDuoc(p) ? ` <a href="#" data-huy-pt="${p.id}" class="mo">huỷ</a>` : ''}</td><td class="so">${tien(-p.so_tien)}</td></tr>`).join('')}
             <tr class="tong"><td>${h.tien.tien_thua ? 'Tiền thừa — hoàn khách hoặc trừ vào in' : 'Còn lại'}</td><td class="so" style="color:${h.tien.con_lai ? 'var(--do)' : 'var(--xanh)'}">${tien(h.tien.tien_thua || h.tien.con_lai)}</td></tr>
           </table>
         </div>
@@ -411,6 +416,9 @@ async function trangCa(id) {
   });
   if (coTien()) {
     $('#anh-hd').onclick = () => chay(() => moHoaDon(h));
+    const nutSua = $('#sua-hd'); if (nutSua) nutSua.onclick = () => mr.moSuaHd(ctx(), h, chonGoiHtml, () => { trangCa(id); lamMoiDaiGap(); });
+    document.querySelectorAll('[data-huy-pt]').forEach((a) => (a.onclick = (e) => { e.preventDefault();
+      mr.moHuyPhieu(ctx(), h.phieuThu.find((p) => p.id === Number(a.dataset.huyPt)), () => { trangCa(id); lamMoiDaiGap(); }); }));
     $('#pt-qr').onclick = () => chay(() => moQrThu(h, Number($('#pt-tien').value)));
     const veCl = () => {
       const ds = DM.giaIn.filter((g) => g.co === $('#ps-co').value);
