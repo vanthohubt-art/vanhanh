@@ -3,7 +3,7 @@
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
 import * as kho from './kho.js?v=20261110i';
-import { moHoaDon, moQrThu } from './hoa-don.js?v=20261110k';
+import { moHoaDon, moQrThu } from './hoa-don.js?v=20261111a';
 import * as mr from './mo-rong.js?v=20261110i';
 import * as kh from './khoang.js?v=20261110b';
 
@@ -370,7 +370,7 @@ async function trangCa(id) {
       </div>
       <div>
         <div class="the">
-          <div class="dau-the"><h2>Tiền</h2><span class="phai">${coTien() ? `<button class="nut nho" id="anh-hd">${ic('may')} Ảnh hoá đơn</button>` : ''}</span></div>
+          <div class="dau-the"><h2>Tiền</h2><span class="phai">${coTien() ? `<button class="nut nho" id="anh-hd">${ic('may')} Ảnh hợp đồng</button>` : ''}</span></div>
           <table>
             <tr><td>Gói ${esc(h.goi_ten)}${h.giam_gia ? ` (giảm ${tien(h.giam_gia)})` : ''}</td><td class="so">${tien(h.tien.tien_goi)}</td></tr>
             ${h.phatSinh.map((p) => `<tr><td>${esc(p.mo_ta)}${p.so_luong > 1 ? ' × ' + p.so_luong : ''}${coTien() ? ` <a href="#" data-xoa="${p.id}" class="mo">xoá</a>` : ''}</td><td class="so">${tien(p.thanh_tien)}</td></tr>`).join('')}
@@ -421,7 +421,10 @@ async function trangCa(id) {
     bao('Đã lưu'); trangCa(id); lamMoiDaiGap();
   });
   if (coTien()) {
-    $('#anh-hd').onclick = () => chay(() => moHoaDon(h));
+    $('#anh-hd').onclick = () => chay(async () => {   // tên concept / makeup khách đã chọn in vào mục Gói dịch vụ
+      try { h.anhChon = (await kho.ham('crm_ca_them', { p_id: id, p_ai: toi })).anh_mau.map((a) => a.ten); } catch { h.anhChon = []; }
+      await moHoaDon(h);
+    });
     const nutSua = $('#sua-hd'); if (nutSua) nutSua.onclick = () => mr.moSuaHd(ctx(), h, chonGoiHtml, () => { trangCa(id); lamMoiDaiGap(); });
     document.querySelectorAll('[data-huy-pt]').forEach((a) => (a.onclick = (e) => { e.preventDefault();
       mr.moHuyPhieu(ctx(), h.phieuThu.find((p) => p.id === Number(a.dataset.huyPt)), () => { trangCa(id); lamMoiDaiGap(); }); }));

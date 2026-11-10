@@ -4,6 +4,11 @@
 
 import { TAI_KHOAN_NHAN } from './cau-hinh.js?v=20261109h';
 import { chuoiVietQR, noiDungCK } from './vietqr.js?v=20261109b';
+import { goiGom } from './goi-gom.js?v=20261111a';
+
+// Điều khoản in cuối hợp đồng (cọc, đổi lịch, huỷ, thời hạn giữ file…). ĐỂ TRỐNG cho tới khi anh Thọ chốt câu chữ —
+// trợ lý KHÔNG tự viết điều khoản. Mỗi phần tử là một câu; mảng rỗng thì không in mục này.
+const DIEU_KHOAN = [];
 
 const STUDIO = {
   ten: 'HOME STUDIO',
@@ -29,23 +34,30 @@ function catDong(ctx, chu, rong) {
   return dong;
 }
 
-/** Danh sách dòng hoá đơn từ chi tiết hợp đồng (kho.chiTiet). Tách riêng để phép thử gọi được. */
+// Phát sinh nhập từ sổ Sheet chỉ có TỔNG tiền, chi tiết nằm ở ghi chú nội bộ ⇒ in tên dễ hiểu cho khách, không in ghi chú.
+const PS_SO_CU = 'Phát sinh ghi trong sổ cũ (chi tiết xem ghi chú hợp đồng)';
+
+/** Các dòng của hợp đồng gửi khách, từ chi tiết hợp đồng (kho.chiTiet). Tách riêng để phép thử gọi được. */
 export function dongHoaDon(h) {
-  const hang = [{ ten: `Gói ${h.goi_ten}`, so: h.tien.tien_goi + (h.giam_gia || 0) }];
-  if (h.giam_gia) hang.push({ ten: 'Giảm giá', so: -h.giam_gia });
-  for (const p of h.phatSinh || []) hang.push({ ten: p.mo_ta + (p.so_luong > 1 ? ` × ${p.so_luong}` : ''), so: p.thanh_tien });
+  const giaGoi = Number(h.tien.tien_goi) + Number(h.giam_gia || 0);
+  const phatSinh = (h.phatSinh || []).map((p) => ({
+    ten: p.mo_ta === PS_SO_CU ? 'Phát sinh thêm (in ảnh, dịch vụ ngoài gói)' : p.mo_ta,
+    chiTiet: p.mo_ta !== PS_SO_CU && Number(p.so_luong) > 1 ? `${p.so_luong} × ${tien(p.don_gia)}` : '',
+    so: Number(p.thanh_tien),
+  }));
   const thu = (h.phieuThu || []).filter((p) => !p.huy && !p.dao).map((p) => ({
-    ten: `${p.so_tien < 0 ? 'Hoàn tiền' : 'Đã thu'} ${String(p.luc || '').slice(0, 5)} ·${p.hinh_thuc === 'tien_mat' ? 'tiền mặt' : 'chuyển khoản'}`,
+    ten: `${p.so_tien < 0 ? 'Hoàn tiền' : 'Đã thu'} ${String(p.luc || '').slice(0, 5)} · ${p.hinh_thuc === 'tien_mat' ? 'tiền mặt' : 'chuyển khoản'}`,
     so: -p.so_tien,
   }));
-  return { hang, thu, tong: h.tien.tong_hoa_don, conLai: h.tien.con_lai, thua: h.tien.tien_thua || 0 };
+  return { goi: { ten: `Gói ${h.goi_ten}`, so: giaGoi }, gom: goiGom(h), giam: Number(h.giam_gia || 0), phatSinh,
+    tongPs: phatSinh.reduce((a, p) => a + p.so, 0), thu, tong: h.tien.tong_hoa_don, conLai: h.tien.con_lai, thua: h.tien.tien_thua || 0 };
 }
 
 export async function veHoaDon(h) {
   try { await document.fonts.load(`700 30px "Be Vietnam Pro"`); await document.fonts.load(`400 30px "Be Vietnam Pro"`); } catch { /* phông dự phòng */ }
   const d = dongHoaDon(h);
   const c = document.createElement('canvas'); const ctx = c.getContext('2d');
-  const rongTen = W - LE * 2 - 280;
+  const rongTen = W - LE * 2 - 280, hn = new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
 
   // Lượt 1: đo chiều cao; lượt 2: vẽ thật.
   const ve = (that) => {
@@ -55,12 +67,21 @@ export async function veHoaDon(h) {
       ctx.font = `${dam ? 700 : 400} ${co}px ${PHONG}`; ctx.fillStyle = mau; ctx.textAlign = canh; ctx.fillText(s, x, yy);
     };
     const ke = (yy, mau = MAU.vien, day = 2) => { if (that) { ctx.fillStyle = mau; ctx.fillRect(LE, yy, W - LE * 2, day); } };
-    const dong = (ten, so, { dam = false, mau = MAU.chu, co = 32 } = {}) => {
+    const dong = (ten, so, { dam = false, mau = MAU.chu, co = 32, phu = '' } = {}) => {
       ctx.font = `${dam ? 700 : 400} ${co}px ${PHONG}`;
       const ds = catDong(ctx, ten, rongTen);
       ds.forEach((t, i) => chu(t, LE, y + co + i * (co + 12), co, dam, mau));
       chu(tien(so), W - LE, y + co, co, dam, mau, 'right');
-      y += ds.length * (co + 12) + 22;
+      y += ds.length * (co + 12);
+      if (phu) { chu(phu, LE, y + 24, 24, false, MAU.nhat); y += 34; }
+      y += 22;
+    };
+    const muc = (so, ten) => { y += 30; chu(`${so}. ${ten}`, LE, y + 28, 28, true, MAU.nhan); y += 52; };
+    const thongTin = (nhan, gt) => { if (!gt) return; chu(nhan, LE, y + 30, 30, false, MAU.nhat); chu(gt, LE + 250, y + 30, 30, false, MAU.chu); y += 46; };
+    const gach = (s, co = 28) => {   // một ý "gói gồm", có chấm đầu dòng, tự xuống dòng
+      ctx.font = `400 ${co}px ${PHONG}`;
+      catDong(ctx, s, W - LE * 2 - 44).forEach((t, i) => { if (!i) chu('•', LE + 8, y + co, co, true, MAU.nhan); chu(t, LE + 40, y + co, co, false, MAU.chu); y += co + 12; });
+      y += 4;
     };
 
     if (that) { ctx.fillStyle = MAU.nen; ctx.fillRect(0, 0, W, c.height); ctx.fillStyle = MAU.nhan; ctx.fillRect(0, 0, W, 14); }
@@ -70,15 +91,33 @@ export async function veHoaDon(h) {
     y += 38; chu(STUDIO.lienHe, LE, y, 26, false, MAU.nhat);
     y += 44; ke(y, MAU.nhan, 3);
 
-    y += 70; chu('HOÁ ĐƠN DỊCH VỤ', LE, y, 40, true, MAU.chu); chu(h.ma, W - LE, y, 30, false, MAU.nhat, 'right');
-    y += 56; chu(`Khách hàng: ${h.khach}`, LE, y, 32, false, MAU.chu);
-    if (h.sdt) { y += 46; chu(`Số điện thoại: ${h.sdt}`, LE, y, 32, false, MAU.chu); }
-    if (h.ngay_chup) { y += 46; chu(`Ngày chụp: ${ngayDu(h.ngay_chup)}${h.gio_chup ? ' · ' + String(h.gio_chup).slice(0, 5) : ''}`, LE, y, 32, false, MAU.chu); }
-    y += 40; ke(y);
+    y += 70; chu('HỢP ĐỒNG DỊCH VỤ CHỤP ẢNH', LE, y, 40, true, MAU.chu);
+    y += 44; chu(`Số ${h.ma} · lập ngày ${ngayDu(hn)}`, LE, y, 26, false, MAU.nhat);
 
-    y += 26; for (const r of d.hang) dong(r.ten, r.so);
+    muc(1, 'KHÁCH HÀNG');
+    thongTin('Họ tên', h.khach); thongTin('Điện thoại', h.sdt); thongTin('Địa chỉ', h.dia_chi); thongTin('Tư vấn', h.sale_online);
+
+    muc(2, 'LỊCH CHỤP');
+    thongTin('Ngày chụp', h.ngay_chup ? `${ngayDu(h.ngay_chup)}${h.gio_chup ? ' · ' + String(h.gio_chup).slice(0, 5) : ''}` : 'Sẽ hẹn sau');
+    thongTin('Địa điểm', h.ngay_chup ? 'Home Studio — 79 Hà Huy Tập, Yên Viên' : '');
+    if (h.hen_tra_anh && h.trang_thai < 8) thongTin('Hẹn trả ảnh', ngayDu(h.hen_tra_anh));
+
+    muc(3, 'GÓI DỊCH VỤ');
+    dong(d.goi.ten, d.goi.so, { dam: true });
+    if (d.gom.length) { y -= 8; for (const s of d.gom) gach(s); y += 10; }
+    if (h.anhChon && h.anhChon.length) { gach('Concept / makeup đã chọn: ' + h.anhChon.join(', ')); y += 10; }
+    if (d.giam) dong('Giảm giá', -d.giam, { mau: MAU.xanh });
+
+    if (d.phatSinh.length) {
+      muc(4, 'DỊCH VỤ PHÁT SINH');
+      for (const p of d.phatSinh) dong(p.ten, p.so, { phu: p.chiTiet });
+    }
+
+    muc(d.phatSinh.length ? 5 : 4, 'THANH TOÁN');
+    dong(`Gói dịch vụ${d.giam ? ' (đã giảm)' : ''}`, d.goi.so - d.giam);
+    if (d.phatSinh.length) dong('Dịch vụ phát sinh', d.tongPs);
     ke(y); y += 20;
-    dong('TỔNG HOÁ ĐƠN', d.tong, { dam: true, co: 36 });
+    dong('TỔNG GIÁ TRỊ HỢP ĐỒNG', d.tong, { dam: true, co: 36 });
     for (const r of d.thu) dong(r.ten, r.so, { mau: MAU.nhat, co: 28 });
     ke(y); y += 20;
     if (d.thua) dong('Tiền thừa (hoàn khách hoặc trừ vào in)', d.thua, { dam: true, co: 38, mau: MAU.xanh });
@@ -106,8 +145,11 @@ export async function veHoaDon(h) {
       y += 20;
     }
 
-    if (h.hen_tra_anh && h.trang_thai < 8) { y += 20; chu(`Hẹn trả ảnh: ${ngayDu(h.hen_tra_anh)}`, LE, y + 30, 30, true, MAU.chu); y += 60; }
-    y += 40; chu('Cảm ơn gia đình đã tin chọn Home Studio!', W / 2, y, 30, false, MAU.nhan, 'center');
+    if (DIEU_KHOAN.length) {
+      y += 10; muc(d.phatSinh.length ? 6 : 5, 'ĐIỀU KHOẢN');
+      for (const s of DIEU_KHOAN) gach(s, 26);
+    }
+    y += 50; chu('Cảm ơn gia đình đã tin chọn Home Studio!', W / 2, y, 30, false, MAU.nhan, 'center');
     y += 70;
     return y;
   };
@@ -139,7 +181,7 @@ export async function veQrThu(h, soTien) {
   for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (qr.isDark(r, k)) ctx.fillRect(x0 + (k + 4) * o, y + (r + 4) * o, o, o);
   y += canh + 80;
   chu(tien(soTien), y, 64, true, MAU.do); y += 70;
-  chu(`${tk.nganHang} · ${tk.stk.replace(/(d{4})(?=d)/g, '$1 ')}`, y, 34, true, MAU.chu); y += 50;
+  chu(`${tk.nganHang} · ${tk.stk.replace(/(\d{4})(?=\d)/g, '$1 ')}`, y, 34, true, MAU.chu); y += 50;
   chu(tk.chuTk, y, 32, false, MAU.chu); y += 50;
   chu(`Nội dung: ${nd}`, y, 30, false, MAU.nhat); y += 60;
   chu('Mở app ngân hàng → Quét mã — số tiền và nội dung tự điền sẵn', y, 26, false, MAU.nhat); y += 70;
@@ -156,7 +198,7 @@ export async function moQrThu(h, soTien) {
 
 /** Mở hộp xem trước + nút Chia sẻ / Tải ảnh. */
 export async function moHoaDon(h) {
-  return moAnh(await veHoaDon(h), `hoa-don-${h.ma}.png`, 'Hoá đơn Home Studio ' + h.ma);
+  return moAnh(await veHoaDon(h), `hop-dong-${h.ma}.png`, 'Hợp đồng Home Studio ' + h.ma);
 }
 
 async function moAnh(c, tenTep, tieuDe) {
