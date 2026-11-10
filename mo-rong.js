@@ -12,6 +12,8 @@ const KHOAN = { mat_bang: 'Mặt bằng', dien_nuoc: 'Điện nước', luong: '
 const VAN_DE = { chup_lau: 'Chụp lâu', anh_xau: 'Ảnh chưa đẹp', tra_tre: 'Trả ảnh trễ', thai_do: 'Thái độ', gia: 'Giá cao', phat_sinh: 'Phát sinh bất ngờ', khac: 'Khác' };
 const CSKH = { nhac_chon_anh: ['Nhắc khách chọn ảnh', 'Đã gửi ảnh gốc mà khách chưa chọn'], xin_danh_gia: ['Xin đánh giá sau chụp', 'Trả ảnh 2–14 ngày, chưa có đánh giá'],
   sinh_nhat: ['Sinh nhật bé sắp tới', 'Mời chụp sinh nhật — trong 30 ngày tới'], ky_niem: ['Tròn 1 năm từ lần chụp', 'Mời chụp kỷ niệm — chưa đặt ca mới'] };
+// Loại CSKH ghi từ màn khác (không thành cột việc ở màn Chăm sóc khách) — chỉ để gọi tên trong nhật ký.
+const TEN_CSKH_KHAC = { bao_tra_anh: ['Nhắc lấy ảnh in'], hoi_tham: ['Hỏi thăm'], khac: ['Khác'] };
 const TT_BAI = { nhap: ['Nháp', 'tt1'], cho_duyet: ['Chờ anh Thọ duyệt', 'tt3'], da_duyet: ['Đã duyệt — chờ đăng', 'tt4'], da_dang: ['Đã đăng', 'tt2'], huy: ['Huỷ', 'tt5'] };
 // Tên Page THẬT ở bảng Lark 14.1 (đọc 09/11/2026) — máy đăng tra token theo tên này. Nhiều Page: cách nhau dấu phẩy.
 const FANPAGE = ['Home Studio - Chụp ảnh cho bé và gia đình', 'Home Studio - Ảnh viện gia đình và bé yêu', 'Homestudio - Chụp ảnh thẻ', 'Homestudio - Phóng sự cưới & Event film', 'TayTo Studio', 'TayTo Studio - Chụp ảnh kỷ yếu đẹp chất Hà Nội'];
@@ -333,7 +335,7 @@ export async function trangCskh(c) {
           || '<div class="nhom-viec mo">Không có việc ✓</div>'}</div>`;
     }).join('')}</div>
     <div class="the"><h2>Nhật ký chăm sóc</h2><div class="cuon-doc" style="max-height:360px">${r.nhat_ky.map((x) => `<div class="gd"><span><b style="font-weight:600">${c.esc(x.khach || '')}</b> <span class="mo nho">${x.ma || ''}</span><br>
-      <span class="mo nho">${(CSKH[x.loai] || [x.loai])[0]}${x.ket_qua ? ' · ' + c.esc(x.ket_qua) : ''}</span></span><span class="mo nho">${c.esc(x.ai)} · ${x.luc}</span></div>`).join('') || '<div class="mo">Chưa có.</div>'}</div></div>`;
+      <span class="mo nho">${(CSKH[x.loai] || TEN_CSKH_KHAC[x.loai] || [x.loai])[0]}${x.ket_qua ? ' · ' + c.esc(x.ket_qua) : ''}</span></span><span class="mo nho">${c.esc(x.ai)} · ${x.luc}</span></div>`).join('') || '<div class="mo">Chưa có.</div>'}</div></div>`;
   document.querySelectorAll('[data-lh]').forEach((b) => (b.onclick = () => {
     const [loai, id, khach] = b.dataset.lh.split('|');
     const h = hop(c, 'Ghi kết quả liên hệ', `<label>Kết quả<input id="lh-kq" placeholder="Khách hẹn tối chọn · khách đặt lịch 20/12 · không nghe máy…"></label>
@@ -345,6 +347,48 @@ export async function trangCskh(c) {
   }));
   document.querySelectorAll('[data-dg]').forEach((b) => (b.onclick = () => moDanhGia(c, Number(b.dataset.dg), () => trangCskh(c))));
 }
+// ═════════ CHỜ KHÁCH LẤY ẢNH (025) ═════════
+// Mọi ca đang "7. Chờ in / giao", kể cả ca cũ — các màn khác chỉ xét 45–90 ngày nên khách lâu chưa lấy không ai nhắc.
+const NHOM_CHO = [['Trong 30 ngày', (x) => x.cho_ngay != null && x.cho_ngay <= 30], ['1–3 tháng', (x) => x.cho_ngay > 30 && x.cho_ngay <= 90],
+  ['3–12 tháng', (x) => x.cho_ngay > 90 && x.cho_ngay <= 365], ['Hơn 1 năm', (x) => x.cho_ngay > 365], ['Sổ không ghi ngày chụp', (x) => x.cho_ngay == null]];
+export async function trangChoLay(c, loc = '') {
+  const ds = await c.kho.ham('crm_cho_lay_anh', {});
+  const chuaNhac = ds.filter((x) => !x.nhac_gan_day).length, no = ds.filter((x) => Number(x.con_lai) > 0);
+  const hien = loc === 'no' ? no : loc === 'chua-nhac' ? ds.filter((x) => !x.nhac_gan_day) : ds;
+  c.trang.innerHTML = c.dauTrang('Sau chụp', 'Chờ khách lấy ảnh', 'Mọi ca đang ở "7. Chờ in / giao" — ảnh in xong, khách chưa đến lấy. Gọi/Zalo nhắc rồi bấm <b>Đã nhắc</b> (ghi khách nói gì); khách đến lấy thì bấm <b>Đã lấy</b> — còn nợ thì ghi phiếu thu trước.') + `
+    <div class="the" style="padding:12px 14px">
+      <a class="chip ${!loc ? 'chon' : ''}" href="#/cho-lay">Tất cả <span class="so">${ds.length}</span></a>
+      <a class="chip ${loc === 'chua-nhac' ? 'chon' : ''}" href="#/cho-lay/chua-nhac">Chưa nhắc 7 ngày qua <span class="so">${chuaNhac}</span></a>
+      <a class="chip ${loc === 'no' ? 'chon' : ''}" href="#/cho-lay/no">Còn nợ <span class="so">${no.length} · ${c.tien(no.reduce((s, x) => s + Number(x.con_lai), 0))}</span></a>
+    </div>
+    ${NHOM_CHO.map(([ten, f]) => {
+      const nh = hien.filter(f);
+      if (!nh.length) return '';
+      return `<div class="the"><div class="dau-the"><h2>${ten}</h2><span class="phai mo">${nh.length} ca</span></div>
+        ${nh.map((x) => `<div class="nhom-viec" style="border-left:3px solid ${x.nhac_gan_day ? 'var(--xanh)' : 'var(--vang, #C98A00)'};padding-left:10px">
+          <div class="hang-nut"><a href="#/ca/${x.id}" style="text-decoration:none"><b>${c.esc(x.khach)}</b></a> <span class="mo nho">${c.esc(x.goi)} · ${x.ma}</span>
+            ${Number(x.con_lai) > 0 ? `<span class="nhan do">còn ${c.tien(x.con_lai)}</span>` : ''}</div>
+          <div class="mo nho" style="margin:2px 0 6px">${x.ngay_chup ? `Chụp ${c.ngayVN(x.ngay_chup)}${x.ngay_chup.slice(0, 4) !== c.homNay().slice(0, 4) ? '/' + x.ngay_chup.slice(0, 4) : ''} · chờ ${x.cho_ngay} ngày` : `Sổ không ghi ngày${x.thang_so ? ' · tháng ' + x.thang_so : ''}`}
+            · ${x.lan_nhac ? `đã nhắc ${x.lan_nhac} lần, lần cuối ${c.ngayVN(x.nhac_cuoi)}${x.nhac_ai ? ' (' + c.esc(x.nhac_ai) + ')' : ''}${x.nhac_ket_qua ? ': “' + c.esc(x.nhac_ket_qua) + '”' : ''}` : 'chưa nhắc lần nào'}</div>
+          <div class="hang-nut">${c.sdtHtml(x.sdt)}${x.sdt ? `<a class="nut phu nho" href="https://zalo.me/${c.esc(x.sdt)}" target="_blank" rel="noopener">Zalo</a>` : ''}
+            <button class="nut phu nho" data-nhac="${x.id}">Đã nhắc</button><button class="nut nho" data-lay="${x.id}" data-no="${Number(x.con_lai) || 0}">Đã lấy</button></div></div>`).join('')}</div>`;
+    }).join('') || '<div class="trong">Không có ca nào đang chờ khách lấy ảnh ✓</div>'}`;
+  c.trang.querySelectorAll('[data-nhac]').forEach((b) => (b.onclick = () => {
+    const h = hop(c, 'Ghi lần nhắc lấy ảnh', `<label>Khách nói gì<input id="nl-kq" placeholder="Hẹn thứ 7 qua lấy · nhờ gửi xe ôm · không nghe máy…"></label>
+      <div class="hang-nut" style="margin-top:12px"><button class="nut" id="nl-luu">Lưu</button></div>`);
+    h.g.querySelector('#nl-luu').onclick = () => c.chay(async () => {
+      await c.kho.ham('crm_nhac_lay_anh', { p_id: Number(b.dataset.nhac), p_ket_qua: giaTri(h.g, '#nl-kq'), p_ai: c.toi });
+      h.dong(); c.bao('Đã ghi lần nhắc'); trangChoLay(c, loc);
+    });
+  }));
+  c.trang.querySelectorAll('[data-lay]').forEach((b) => (b.onclick = () => c.chay(async () => {
+    if (Number(b.dataset.no) > 0) { c.bao('Khách còn nợ ' + c.tien(b.dataset.no) + ' — mở ca ghi phiếu thu trước', true); location.hash = '#/ca/' + b.dataset.lay; return; }
+    if (!confirm('Khách đã đến lấy ảnh in? Ca chuyển sang "8. Hoàn thành".')) return;
+    await c.kho.ham('crm_khach_da_lay', { p_id: Number(b.dataset.lay), p_ai: c.toi });
+    c.bao('Đã chuyển sang Hoàn thành'); trangChoLay(c, loc);
+  })));
+}
+
 export function moDanhGia(c, hopDong, xong) {
   const h = hop(c, 'Đánh giá sau chụp', `
     <div class="mo">Hỏi khách chấm 1–5 sao và điều chưa hài lòng — ghi đúng lời khách, đừng làm đẹp.</div>

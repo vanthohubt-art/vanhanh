@@ -2,9 +2,9 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261110e';
+import * as kho from './kho.js?v=20261110f';
 import { moHoaDon, moQrThu } from './hoa-don.js?v=20261109m';
-import * as mr from './mo-rong.js?v=20261110e';
+import * as mr from './mo-rong.js?v=20261110f';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
@@ -70,6 +70,7 @@ const MENU = [
   { tt: 'video', ten: 'Video khách', ic: 'video' },
   { nhom: 'Sau chụp' },
   { tt: 'cskh', ten: 'Chăm sóc khách', ic: 'tim2' },
+  { tt: 'cho-lay', ten: 'Chờ khách lấy ảnh', ic: 'qua' },
   { tt: 'chat-luong', ten: 'Chất lượng dịch vụ', ic: 'sao' },
   { nhom: 'Thu chi' },
   { tt: 'cong-no', ten: 'Công nợ & thu tiền', ic: 'vi', tien: true },
@@ -108,8 +109,29 @@ function theCa(h, phu = '') {
 // ═════════ TRANG CHỦ ═════════
 const BO_PHAN = { sale: ['Sale · tư vấn', 'Chốt lịch, thu cọc, xếp ekip'], hau_ky: ['Hậu kỳ', 'Gửi ảnh gốc, chỉnh, trả ảnh đúng hạn'], cskh: ['CSKH · thu ngân', 'Nhắc khách chọn ảnh, thu nốt tiền'] };
 const NHOM_GAP = ['qua_hen', 'thieu_tho', 'sap_chup_chua_coc'];
+// Đối chiếu sổ Sheet ⇄ CRM đêm qua (Apps Script 21:00, crm/db/023) — chỉ chủ. Không chặn trang chủ: lỗi thì im.
+async function veDoiChieuDem() {
+  const o = $('#dc-dem'); if (!o || !laChu()) return;
+  let g; try { g = await kho.ham('crm_doi_chieu_dem_moi', { p_ai: toi }); } catch { return; }
+  if (!g) return;
+  const k = g.ket_qua || {}, dc = k.doi_chieu || {}, cn = k.cap_nhat || {};
+  const qua = g.ngay < congNgay(homNay(), -1);
+  const ds = [['Có ở Sheet, chưa có trong app', dc.chi_sheet || [], (x) => `${ngayVN(x.ngay)} · ${esc(x.ten)}${x.sdt ? ' · ' + esc(x.sdt) : ''}`],
+    ['Có trong app, chưa có ở Sheet', dc.chi_crm || [], (x) => `${ngayVN(x.ngay)} · <a href="#/tim/${encodeURIComponent(x.ma)}">${x.ma}</a> · ${esc(x.ten)}`],
+    ['Lệch tiền', dc.lech_tien || [], (x) => `${ngayVN(x.ngay)} · <a href="#/tim/${encodeURIComponent(x.ma)}">${x.ma}</a> · ${esc(x.ten)}: tổng Sheet ${tien(x.tong_so)} / app ${tien(x.tong_crm)} · thu ${tien(x.thu_so)} / ${tien(x.thu_crm)}`],
+    ['Một ca có hai bản trong CRM', dc.hai_ban || [], (x) => `${ngayVN(x.ngay)} · ${esc(x.ten)} · ${x.ma_so} & ${x.ma_app}`]].filter(([, d]) => d.length);
+  const mau = k.dung || qua ? 'var(--do)' : ds.length ? 'var(--vang, #C98A00)' : 'var(--xanh)';
+  o.innerHTML = `<div class="the" style="border-color:${mau}"><div class="dau-the"><h2>Đối chiếu sổ ⇄ app · ${ngayVN(g.ngay)}</h2><span class="phai mo">chạy ${g.luc.slice(11)}</span></div>
+    ${qua ? '<p style="color:var(--do);margin:0 0 6px"><b>Đêm qua máy KHÔNG chạy</b> — xem mục Thực thi của Apps Script "CRM doi chieu so".</p>' : ''}
+    ${k.dung ? `<p style="color:var(--do);margin:0"><b>Máy dừng, không ghi gì:</b> ${(k.loi || []).map(esc).join(' · ')}</p>` : `
+    <p class="mo" style="margin:0 0 6px">Sổ → CRM: ${(cn.sua || []).length} ô cập nhật${(cn.ma_moi || []).length ? ' · thêm ' + cn.ma_moi.length + ' ca cũ' : ''}${(cn.bo_qua || []).length ? ' · giữ bản app ' + cn.bo_qua.length + ' ô' : ''} · so ${dc.so_ca_so || 0} ca sổ với ${dc.so_ca_crm || 0} ca CRM từ ${ngayVN(dc.tu || g.tu)}</p>
+    ${ds.length ? ds.map(([t, d, f]) => `<details style="margin:4px 0"><summary><b>${t}: ${d.length}</b></summary><div class="mo" style="margin:4px 0 0 14px">${d.map(f).join('<br>')}</div></details>`).join('')
+      : '<p style="margin:0;color:var(--xanh)"><b>✓ Sheet và app khớp</b></p>'}`}</div>`;
+}
+
 async function trangChu() {
   const tc = await kho.trangChu(); tcNho = tc; veDaiGap(tc);
+  setTimeout(veDoiChieuDem, 0);
   const thang = tc.thang.slice(5, 7) + '/' + tc.thang.slice(0, 4);
   const tongViec = tc.viec.reduce((s, v) => s + v.so, 0);
   const theoBP = {};
@@ -123,6 +145,7 @@ async function trangChu() {
       ${theSo('#/lich/' + tc.hom_nay + '/thang', 'lich', ['var(--tt8n)', 'var(--tt8c)'], 'Ca chụp trong tháng', tc.ca_thang.so, tc.ca_thang.xong + ' ca đã hoàn thành')}
       ${theSo('#/', 'ca', ['var(--nhan-nhat)', 'var(--nhan-dam)'], 'Việc đang chờ cả đội', tongViec, tc.gap ? `<span style="color:var(--do);font-weight:700">${tc.gap} việc gấp</span>` : 'không có việc gấp')}
     </div>
+    <div id="dc-dem"></div>
     <div class="hai-cot">
       <div class="the">
         <div class="dau-the"><div><div class="nhan-nho mo" style="font-weight:700;color:var(--nhan);font-size:11px">LỊCH CHỤP HÔM NAY</div><h2>${tc.lich_hom_nay.length} ca cần phối hợp</h2></div>
@@ -133,7 +156,7 @@ async function trangChu() {
             <span><span class="ten">${esc(c.khach)}</span><br><span class="phu">${esc(c.goi)} · ${c.ekip.length ? c.ekip.map((e) => esc(e.ten)).join(', ') : '<b style="color:var(--do)">chưa xếp ekip</b>'}</span></span>
             <span style="text-align:right">${nhanTT(c.trang_thai, c.trang_thai_ten)}${c.con_lai ? `<br><span class="phu" style="color:var(--do)">còn ${tien(c.con_lai)}</span>` : ''}</span>
           </a>`).join('') : '<div class="trong">Hôm nay không có ca chụp.</div>'}
-        ${tc.ca_cu_mo ? `<div class="canh" style="margin:12px 0 0">${ic('canh')} <b>${tc.ca_cu_mo} ca cũ</b> (chụp hơn 45 ngày trước) vẫn đang mở — phần lớn do sổ cũ không ghi tiến độ. <a href="#/tim">Xem và đóng dần</a>.</div>` : ''}
+        ${tc.ca_cu_mo ? `<div class="canh" style="margin:12px 0 0">${ic('canh')} <b>${tc.ca_cu_mo} ca cũ</b> (chụp hơn 45 ngày trước) chưa hoàn thành — nhiều nhà <b>chưa đến lấy ảnh in</b>. <a href="#/cho-lay">Xem danh sách chờ khách lấy ảnh</a>.</div>` : ''}
       </div>
       <div>
         <div class="dau-the"><div><div class="nhan-nho" style="font-weight:700;color:var(--nhan);font-size:11px">CÔNG VIỆC CẦN XỬ LÝ</div><h2>${tongViec} việc đang chờ</h2></div>
@@ -635,6 +658,7 @@ async function dieuHuong() {
     else if (p0 === 'han-giao') await mr.trangHanGiao(ctx());
     else if (p0 === 'video') await mr.trangVideo(ctx(), p1 || 'can_lam');
     else if (p0 === 'cskh') await mr.trangCskh(ctx());
+    else if (p0 === 'cho-lay') await mr.trangChoLay(ctx(), p1 || '');
     else if (p0 === 'chat-luong') await mr.trangChatLuong(ctx(), p1 || undefined);
     else if (p0 === 'chi') await mr.trangChi(ctx(), p1 || undefined);
     else if (p0 === 'dang-bai') await mr.trangDangBai(ctx());
