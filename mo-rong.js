@@ -551,6 +551,44 @@ async function veAlbum(c, h, al, el, veLai) {
 
 // ═════════ PHẦN THÊM CỦA HỒ SƠ CA ═════════
 // Concept + makeup khách chọn · thông tin bé · video · checkout makeup · đánh giá.
+// ═════════ HUỶ HỢP ĐỒNG (026) ═════════
+// Đã huỷ ⇒ thẻ xám đầu hồ sơ (lý do, ngày cũ, giữ lại/hoàn) + "Mở lại". Chưa huỷ ⇒ nút nhỏ "Huỷ hợp đồng" (chỉ sale online/chủ).
+export async function veHuy(c, h, o, xong) {
+  if (!o) return;
+  if (h.trang_thai === 9) {
+    const t = await c.kho.ham('crm_thong_tin_huy', { p_id: h.id });
+    o.innerHTML = `<div class="the" style="border-color:var(--tt9c);background:var(--tt9n)">
+      <h2 style="margin-top:0">Hợp đồng đã huỷ${t?.luc ? ' · ' + t.luc : ''}</h2>
+      <p style="margin:0 0 6px"><b>Lý do:</b> ${c.esc(t?.ly_do || '—')}</p>
+      <p class="mo" style="margin:0">${t?.ngay_chup_cu ? 'Lịch cũ: ' + c.ngayVN(t.ngay_chup_cu) + '/' + t.ngay_chup_cu.slice(0, 4) + ' · ' : ''}Studio giữ lại ${c.tien(t?.giu_lai)}${Number(t?.hoan) ? ' · đã hoàn khách ' + c.tien(t.hoan) : ''}</p>
+      ${c.coTien() ? '<div class="hang-nut" style="margin-top:10px"><button class="nut phu nho" id="mo-lai">Mở lại hợp đồng</button></div>' : ''}</div>`;
+    const n = o.querySelector('#mo-lai');
+    if (n) n.onclick = () => c.chay(async () => {
+      if (!confirm('Mở lại hợp đồng này? Lịch cũ được trả lại; phiếu hoàn cọc (nếu có) vẫn giữ — thu lại thì ghi phiếu mới.')) return;
+      await c.kho.ham('crm_mo_lai_hop_dong', { p_id: h.id, p_ai: c.toi }); c.bao('Đã mở lại'); xong();
+    });
+    return;
+  }
+  if (!c.coTien() || h.trang_thai === 8) return;
+  const daThu = Number(h.tien?.da_thu || 0);
+  o.innerHTML = `<div style="text-align:right;margin:-4px 0 8px"><a href="#" class="mo" id="nut-huy">Khách huỷ? · Huỷ hợp đồng</a></div>`;
+  o.querySelector('#nut-huy').onclick = (e) => {
+    e.preventDefault();
+    const hp = hop(c, 'Huỷ hợp đồng ' + h.ma, `
+      ${h.trang_thai >= 3 ? '<p style="color:var(--do);margin:0 0 8px">Ca đã chụp — chỉ anh Thọ huỷ được.</p>' : ''}
+      <label>Lý do huỷ (bắt buộc)<input id="h-ly" placeholder="Khách đổi ý · trùng lịch · bé ốm · chuyển sang studio khác…"></label>
+      <label style="margin-top:8px">Hoàn cọc cho khách (đã thu ${c.tien(daThu)})<input id="h-hoan" type="number" step="1000" min="0" max="${daThu}" value="0"></label>
+      <p class="mo" style="margin:6px 0 0">Không hoàn thì để 0 — số giữ lại tính vào doanh thu. Ca rời lịch; ngày cũ được lưu để mở lại nếu khách quay lại.</p>
+      <div class="hang-nut" style="margin-top:12px"><button class="nut" id="h-luu" style="background:var(--do)">Huỷ hợp đồng</button></div>`);
+    hp.g.querySelector('#h-luu').onclick = () => c.chay(async () => {
+      const ly = giaTri(hp.g, '#h-ly'), hoan = Number(giaTri(hp.g, '#h-hoan') || 0);
+      if (!ly) { c.bao('Ghi lý do huỷ', true); return; }
+      const r = await c.kho.ham('crm_huy_hop_dong', { p_id: h.id, p_ly_do: ly, p_hoan: hoan, p_ai: c.toi });
+      hp.dong(); c.bao('Đã huỷ · giữ lại ' + c.tien(r.giu_lai) + (r.hoan ? ' · hoàn ' + c.tien(r.hoan) : '')); xong();
+    });
+  };
+}
+
 export async function veHoSoThem(c, h, chua) {
   const t = await c.kho.ham('crm_ca_them', { p_id: h.id, p_ai: c.toi });
   const am = (loai) => t.anh_mau.filter((a) => a.loai === loai);

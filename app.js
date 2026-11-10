@@ -2,9 +2,9 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261110f';
+import * as kho from './kho.js?v=20261110g';
 import { moHoaDon, moQrThu } from './hoa-don.js?v=20261109m';
-import * as mr from './mo-rong.js?v=20261110f';
+import * as mr from './mo-rong.js?v=20261110g';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
@@ -334,9 +334,10 @@ async function trangCa(id) {
     </div>
     <div class="ho-so">
       <div>
+        <div id="huy-hd"></div>
         <div class="the">
           <h2>Đổi trạng thái</h2>
-          <div class="ds-tt">${DM.trangThai.map((t) => `<button data-tt="${t.so}" class="tt${t.so} ${t.so === h.trang_thai ? 'dang' : ''}">${t.so}. ${esc(t.ten)}</button>`).join('')}</div>
+          <div class="ds-tt">${DM.trangThai.filter((t) => t.so !== 9 || h.trang_thai === 9).map((t) => `<button data-tt="${t.so}" class="tt${t.so} ${t.so === h.trang_thai ? 'dang' : ''}">${t.so}. ${esc(t.ten)}</button>`).join('')}</div>
           <div class="hai" style="margin-top:12px">
             <label>Ngày chụp<input id="ngay" type="date" value="${h.ngay_chup || ''}"></label>
             <label>Giờ chụp<input id="gio" type="time" step="900" value="${h.gio_chup || ''}"></label>
@@ -398,6 +399,7 @@ async function trangCa(id) {
     </div>`;
 
   chay(() => mr.veHoSoThem(ctx(), h, $('#ho-so-them')));
+  chay(() => mr.veHuy(ctx(), h, $('#huy-hd'), () => { trangCa(id); lamMoiDaiGap(); }));
   let ttChon = h.trang_thai;
   document.querySelectorAll('[data-tt]').forEach((b) => (b.onclick = () => {
     ttChon = Number(b.dataset.tt);

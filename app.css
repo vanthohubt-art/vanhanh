@@ -6,14 +6,14 @@
   --nhan: #C2551F; --nhan-dam: #9A3F13; --nhan-nhat: #FBE7DA; --xanh: #2F7A4C; --xanh-nhat: #E2F2E7; --do: #B3261E; --do-nhat: #FBE4E2;
   --vang-nhat: #FFF3D6; --menu: #FFFFFF; --bo: 12px; --bong: 0 1px 2px rgba(60, 40, 20, .06);
   --tt1n: #FCE7F0; --tt1c: #9D174D; --tt2n: #E3F4E8; --tt2c: #1F6B3A; --tt3n: #FFF4D6; --tt3c: #8A5A00; --tt4n: #DDF3F1; --tt4c: #0F6B63;
-  --tt5n: #FDE4E1; --tt5c: #A12A1E; --tt6n: #ECE6FB; --tt6c: #5B3BA8; --tt7n: #FFE9D6; --tt7c: #9A4A0A; --tt8n: #E6EEF9; --tt8c: #244B85;
+  --tt5n: #FDE4E1; --tt5c: #A12A1E; --tt6n: #ECE6FB; --tt6c: #5B3BA8; --tt7n: #FFE9D6; --tt7c: #9A4A0A; --tt8n: #E6EEF9; --tt8c: #244B85; --tt9n: #ECECEC; --tt9c: #6B6B6B;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --nen: #1A1512; --nen-2: #241D19; --the: #2A221E; --chu: #F3ECE6; --chu-nhat: #BBAA9E; --vien: #3D322C; --menu: #221B17;
     --nhan: #E8834F; --nhan-dam: #F3A076; --nhan-nhat: #3B2A21; --xanh: #8DC6A0; --xanh-nhat: #1F3326; --do: #F28B82; --do-nhat: #3B1F1D; --vang-nhat: #3A3220;
     --tt1n: #3D2230; --tt1c: #F5A8C8; --tt2n: #1F3326; --tt2c: #9FD8B1; --tt3n: #3A3220; --tt3c: #F1CF7A; --tt4n: #183532; --tt4c: #8FD8CF;
-    --tt5n: #3B1F1D; --tt5c: #F5A39A; --tt6n: #2C2540; --tt6c: #C4B2F2; --tt7n: #3C2A1B; --tt7c: #F4B57E; --tt8n: #1E2A3D; --tt8c: #A9C4EE;
+    --tt5n: #3B1F1D; --tt5c: #F5A39A; --tt6n: #2C2540; --tt6c: #C4B2F2; --tt7n: #3C2A1B; --tt7c: #F4B57E; --tt8n: #1E2A3D; --tt8c: #A9C4EE; --tt9n: #2A2A2A; --tt9c: #A8A8A8;
   }
 }
 * { box-sizing: border-box; }
@@ -78,7 +78,7 @@ label { display: grid; gap: 4px; font-weight: 600; font-size: 12.5px; color: var
 .nhan { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--nen-2); color: var(--chu-nhat); white-space: nowrap; }
 .nhan.xanh { background: var(--xanh-nhat); color: var(--xanh); } .nhan.do { background: var(--do-nhat); color: var(--do); } .nhan.cam { background: var(--nhan-nhat); color: var(--nhan-dam); } .nhan.vang { background: var(--vang-nhat); color: #8A5A00; }
 .tt1 { background: var(--tt1n); color: var(--tt1c); } .tt2 { background: var(--tt2n); color: var(--tt2c); } .tt3 { background: var(--tt3n); color: var(--tt3c); } .tt4 { background: var(--tt4n); color: var(--tt4c); }
-.tt5 { background: var(--tt5n); color: var(--tt5c); } .tt6 { background: var(--tt6n); color: var(--tt6c); } .tt7 { background: var(--tt7n); color: var(--tt7c); } .tt8 { background: var(--tt8n); color: var(--tt8c); }
+.tt5 { background: var(--tt5n); color: var(--tt5c); } .tt6 { background: var(--tt6n); color: var(--tt6c); } .tt7 { background: var(--tt7n); color: var(--tt7c); } .tt8 { background: var(--tt8n); color: var(--tt8c); } .tt9 { background: var(--tt9n); color: var(--tt9c); text-decoration: line-through; }
 .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--vien); border-radius: 999px; padding: 6px 12px; margin: 0 6px 6px 0; cursor: pointer; font-size: 13px; background: var(--the); user-select: none; font-weight: 500; text-decoration: none; color: var(--chu); }
 .chip.chon { background: var(--nhan); border-color: var(--nhan); color: #fff; } .chip .so { font-size: 11px; font-weight: 700; opacity: .8; }
 table { width: 100%; border-collapse: collapse; font-size: 13.5px; } td, th { padding: 9px 8px; border-bottom: 1px solid var(--vien); text-align: left; vertical-align: top; }
@@ -129,7 +129,7 @@ td.so, th.so { text-align: right; white-space: nowrap; font-variant-numeric: tab
 .the-ca .gio { font-weight: 700; font-size: 13px; } .the-ca .ten { font-weight: 700; font-size: 15px; } .the-ca .phu { color: var(--chu-nhat); font-size: 12.5px; }
 .the-ca .tien { margin-left: auto; font-weight: 800; white-space: nowrap; }
 .vien-tt1 { border-left-color: var(--tt1c); } .vien-tt2 { border-left-color: var(--tt2c); } .vien-tt3 { border-left-color: var(--tt3c); } .vien-tt4 { border-left-color: var(--tt4c); }
-.vien-tt5 { border-left-color: var(--tt5c); } .vien-tt6 { border-left-color: var(--tt6c); } .vien-tt7 { border-left-color: var(--tt7c); } .vien-tt8 { border-left-color: var(--tt8c); }
+.vien-tt5 { border-left-color: var(--tt5c); } .vien-tt6 { border-left-color: var(--tt6c); } .vien-tt7 { border-left-color: var(--tt7c); } .vien-tt8 { border-left-color: var(--tt8c); } .vien-tt9 { border-left-color: var(--tt9c); opacity: .7; }
 
 /* ── lịch ── */
 .thanh-ngay { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
