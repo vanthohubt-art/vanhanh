@@ -207,7 +207,8 @@ export async function trangAnhMau(c, loai) {
 export async function trangHanGiao(c) {
   const tu = c.homNay(), den = c.congNgay(tu, 13);
   const datHen = c.coTien();   // chủ / sale online — hẹn trả ảnh là lời hứa với khách
-  const [r, thieu] = await Promise.all([c.kho.ham('crm_han_giao', { p_tu: tu, p_den: den }), datHen ? c.kho.ham('crm_thieu_hen', {}) : []]);
+  const [r, thieu, cu] = await Promise.all([c.kho.ham('crm_han_giao', { p_tu: tu, p_den: den }), datHen ? c.kho.ham('crm_thieu_hen', {}) : [],
+    c.laChu() ? c.kho.ham('crm_ca_cu_mo', { p_ai: c.toi }) : null]);
   const tre = r.ca.filter((x) => x.con_ngay < 0 && x.trang_thai < 8);
   const dh = r.dung_han;
   c.trang.innerHTML = c.dauTrang('Chụp & hậu kỳ', 'Hạn giao ảnh', 'Lịch hẹn trả ảnh 14 ngày tới và các ca đã quá hẹn. Chuyển ca sang "8. Hoàn thành" là máy ghi ngày trả thật để đo đúng hạn.') + `
@@ -224,6 +225,7 @@ export async function trangHanGiao(c) {
       ${thieu.map((x) => `<tr><td><a href="#/ca/${x.id}">${c.esc(x.khach)}</a></td><td>${c.esc(x.goi)}</td><td>${c.ngayVN(x.ngay_chup)}</td><td class="mo">${c.esc(x.trang_thai_ten)}</td>
         <td style="white-space:nowrap"><input type="date" data-hen="${x.id}" style="width:auto"> <a href="#" class="mo" data-goiy="${x.id}" data-ngay="${x.goi_y}">gợi ý ${c.ngayVN(x.goi_y)}</a></td></tr>`).join('')}
       </table></div></div>` : ''}
+    ${theCaCu(c, cu)}
     ${tre.length ? `<div class="the" style="border-color:var(--do)"><h2 style="color:var(--do)">Quá hẹn</h2><div class="luoi-ca">${tre.map((x) => c.theCa({ ...x, tong_hoa_don: null }, `<div><span class="nhan do">trễ ${-x.con_ngay} ngày</span></div>`)).join('')}</div></div>` : ''}
     ${[...Array(14).keys()].map((i) => {
       const d = c.congNgay(tu, i), ds = r.ca.filter((x) => x.hen_tra_anh === d);
@@ -242,6 +244,45 @@ export async function trangHanGiao(c) {
       c.bao('Đã lưu hẹn cho ' + n + ' ca'); trangHanGiao(c);
     });
   }
+  if (cu) ganCaCu(c, cu);
+}
+
+// Ca sổ cũ còn "đang mở" (024) — chỉ chủ. Sổ không ghi tiến độ nên 006 đoán trạng thái theo ngày ⇒ ca giao từ lâu vẫn treo.
+function theCaCu(c, cu) {
+  if (!cu || (!cu.dong_duoc.length && !cu.con_no.length && !cu.lan_dong.length)) return '';
+  const nhom = {};
+  cu.dong_duoc.forEach((x) => { nhom[x.trang_thai_ten] = (nhom[x.trang_thai_ten] || 0) + 1; });
+  const dong = (x) => `<tr><td><a href="#/ca/${x.id}">${c.esc(x.khach)}</a></td><td>${c.esc(x.goi)}</td>
+    <td>${x.ngay_chup ? c.ngayVN(x.ngay_chup) : `<span class="mo">sổ ${x.thang_so ? 'tháng ' + x.thang_so : 'không ghi ngày'}</span>`}</td><td class="mo">${c.esc(x.trang_thai_ten)}</td>
+    <td style="text-align:right">${c.tien(x.con_lai > 0 ? x.con_lai : x.tong_hoa_don)}</td></tr>`;
+  return `<div class="the" id="ca-cu">
+    <div class="dau-the"><h2>Ca sổ cũ còn mở · ${cu.tong} ca</h2></div>
+    <p class="mo" style="margin:0 0 10px">Sổ Sheet không ghi tiến độ nên khi nhập máy đoán trạng thái theo ngày chụp — ca giao từ lâu vẫn treo ở "Đã chụp", "Chờ in/giao"… và làm nhiễu hậu kỳ, việc của tôi. Ca còn nợ <b>không</b> đóng.</p>
+    ${cu.dong_duoc.length ? `<p style="margin:0 0 8px"><b>${cu.dong_duoc.length} ca</b> chụp quá 45 ngày (hoặc sổ không ghi ngày), <b>đã thu đủ</b>: ${Object.entries(nhom).map(([k, v]) => `${c.esc(k)} ${v}`).join(' · ')}.</p>
+      <details style="margin:0 0 10px"><summary class="mo">Xem danh sách</summary><div style="overflow-x:auto;max-height:420px"><table><tr><th>Khách</th><th>Gói</th><th>Chụp</th><th>Đang ở</th><th style="text-align:right">Tổng</th></tr>${cu.dong_duoc.map(dong).join('')}</table></div></details>
+      <button class="nut" id="cc-dong">Chuyển ${cu.dong_duoc.length} ca sang "8. Hoàn thành"</button> <span class="mo">— hẹn trả ảnh giữ nguyên, hoàn tác được</span>` : ''}
+    ${cu.con_no.length ? `<h3 style="margin:16px 0 6px">Còn nợ · ${cu.con_no.length} ca · ${c.tien(cu.con_no.reduce((s, x) => s + Number(x.con_lai), 0))}</h3>
+      <p class="mo" style="margin:0 0 8px">Nợ thật thì nhắc khách; sổ quên ghi đã thu thì mở ca ghi phiếu thu rồi đóng tay.</p>
+      <details><summary class="mo">Xem danh sách</summary><div style="overflow-x:auto;max-height:420px"><table><tr><th>Khách</th><th>Gói</th><th>Chụp</th><th>Đang ở</th><th style="text-align:right">Còn nợ</th></tr>${cu.con_no.map(dong).join('')}</table></div></details>` : ''}
+    ${cu.gan_day ? `<p class="mo" style="margin:12px 0 0">${cu.gan_day} ca chụp trong 45 ngày để nguyên — đang làm thật.</p>` : ''}
+    ${cu.lan_dong.map((l) => `<p class="mo" style="margin:10px 0 0">Đã đóng ${l.so} ca lúc ${l.luc} · <a href="#" data-mo-lai="${l.id}">hoàn tác</a></p>`).join('')}
+  </div>`;
+}
+function ganCaCu(c, cu) {
+  const nut = c.$('#cc-dong');
+  if (nut) nut.onclick = () => c.chay(async () => {
+    if (!confirm(`Chuyển ${cu.dong_duoc.length} ca sổ cũ sang "8. Hoàn thành"?\nCa còn nợ không bị đụng. Hoàn tác được.`)) return;
+    const kq = await c.kho.ham('crm_dong_ca_cu', { p_ids: cu.dong_duoc.map((x) => x.id), p_ai: c.toi });
+    c.bao(`Đã đóng ${kq.so} ca` + (kq.bo_qua ? ` · bỏ qua ${kq.bo_qua} ca vừa đổi` : '')); trangHanGiao(c);
+  });
+  c.trang.querySelectorAll('[data-mo-lai]').forEach((a) => (a.onclick = (e) => {
+    e.preventDefault();
+    c.chay(async () => {
+      if (!confirm('Trả các ca của lần đóng này về trạng thái cũ?')) return;
+      const n = await c.kho.ham('crm_mo_lai_ca_cu', { p_nhat_ky: Number(a.dataset.moLai), p_ai: c.toi });
+      c.bao('Đã trả ' + n + ' ca về trạng thái cũ'); trangHanGiao(c);
+    });
+  }));
 }
 
 // ═════════ VIDEO KHÁCH ═════════
