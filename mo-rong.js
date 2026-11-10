@@ -4,6 +4,7 @@
 // Mỗi hàm nhận `c` (ngữ cảnh từ app.js): kho, DM, toi, vaiToi, coTien, laChu và các hàm định dạng.
 
 import { ALBUM_URL } from './cau-hinh.js?v=20261109h';
+import * as kh from './khoang.js?v=20261110b';
 
 const KENH = { facebook: 'Facebook', zalo: 'Zalo', tiktok: 'TikTok', instagram: 'Instagram', gioi_thieu: 'Người quen giới thiệu', vang_lai: 'Vãng lai', website: 'Website', khac: 'Khác' };
 const TT_LEAD = { moi: ['Mới', 'tt1'], dang_tu_van: ['Đang tư vấn', 'tt3'], da_bao_gia: ['Đã báo giá', 'tt4'], hen_den: ['Hẹn đến studio', 'tt6'], da_chot: ['Đã chốt', 'tt2'], mat: ['Mất', 'tt5'] };
@@ -50,25 +51,32 @@ function hop(c, tieuDe, than) {
 const giaTri = (g, sel) => g.querySelector(sel)?.value?.trim() ?? '';
 
 // ═════════ KẾ HOẠCH THÁNG ═════════
-export async function trangKeHoach(c, thang = c.homNay().slice(0, 7)) {
-  const r = await c.kho.ham('crm_ke_hoach', { p_thang: thang + '-01' });
+// Kỳ xem tự do (khoang.js · 021). Mục tiêu: trọn một tháng = dòng tháng đó (sửa được); quý/năm = cộng các tháng nằm trọn trong kỳ.
+export async function trangKeHoach(c, chu) {
+  const hn = c.homNay(), k = kh.docKhoang(chu, hn), nhan = kh.nhanKhoang(k, hn), thang = k.chu, motThang = k.kieu === 'thang';
+  const r = await c.kho.ham('crm_ke_hoach_khoang', { p_tu: k.tu, p_den: k.den });
   const mt = r.muc_tieu || {}, tt = r.thuc_te;
   const tl = (a, b) => (n(b) ? Math.round((100 * n(a)) / n(b)) : null);
   const duBao = r.ngay_da_qua ? Math.round((n(tt.doanh_thu_da_chup) / r.ngay_da_qua) * r.so_ngay) : null;
   const laiTam = n(r.thuc_thu) - n(r.chi);
   const cot = (ten, thuc, muc, phu, mau) => `<div class="the"><div class="mo">${ten}</div><div class="so-to" style="color:${mau}">${thuc}</div>
     ${muc != null ? `${thanh(muc, mau)}<div class="mo">${muc}% mục tiêu · ${phu}</div>` : `<div class="mo">${phu}</div>`}</div>`;
-  const maxNgay = Math.max(1, ...r.theo_ngay.map((d) => n(d.doanh_thu)));
-  c.trang.innerHTML = c.dauTrang('Điều hành', 'Kế hoạch tháng', `Mục tiêu và tiến độ tháng ${thang.slice(5)}/${thang.slice(0, 4)} · đã qua ${r.ngay_da_qua}/${r.so_ngay} ngày.`, navThang('#/ke-hoach', thang)) + `
+  // Kỳ dài hơn 2 tháng: gom cột theo tháng (365 cột/năm không đọc được).
+  const theoThang = r.so_ngay > 62;
+  const cotNgay = !theoThang ? r.theo_ngay.map((d) => ({ ...d, nhan: Number(d.ngay.slice(8)), href: `#/lich/${d.ngay}/ngay`, ten: c.ngayVN(d.ngay), xong: d.ngay <= c.homNay() }))
+    : Object.values(r.theo_ngay.reduce((o, d) => { const t = d.ngay.slice(0, 7); (o[t] ||= { ngay: t, so_ca: 0, doanh_thu: 0 }); o[t].so_ca += n(d.so_ca); o[t].doanh_thu += n(d.doanh_thu); return o; }, {}))
+      .map((d) => ({ ...d, nhan: 'T' + Number(d.ngay.slice(5)), href: '#/ke-hoach/' + d.ngay, ten: 'Tháng ' + d.ngay.slice(5) + '/' + d.ngay.slice(0, 4), xong: d.ngay <= c.homNay().slice(0, 7) }));
+  const maxNgay = Math.max(1, ...cotNgay.map((d) => n(d.doanh_thu)));
+  c.trang.innerHTML = c.dauTrang('Điều hành', motThang ? 'Kế hoạch tháng' : 'Kế hoạch & tiến độ', `Mục tiêu và tiến độ · ${nhan} · đã qua ${r.ngay_da_qua}/${r.so_ngay} ngày${mt.so_thang ? ` · mục tiêu cộng ${mt.so_thang} tháng đã đặt` : ''}.`, kh.cumKhoang(k, hn, (x) => '#/ke-hoach/' + x)) + `
     <div class="ba-the">
-      ${cot('Doanh thu ca chụp trong tháng', c.trieu(tt.doanh_thu), mt.doanh_thu ? tl(tt.doanh_thu, mt.doanh_thu) : null,
-        mt.doanh_thu ? `mục tiêu ${c.trieu(mt.doanh_thu)}${duBao != null ? ` · dự báo cuối tháng ${c.trieu(duBao)}` : ''}` : 'chưa đặt mục tiêu', 'var(--xanh)')}
+      ${cot('Doanh thu ca chụp trong kỳ', c.trieu(tt.doanh_thu), mt.doanh_thu ? tl(tt.doanh_thu, mt.doanh_thu) : null,
+        mt.doanh_thu ? `mục tiêu ${c.trieu(mt.doanh_thu)}${duBao != null ? ` · dự báo cuối kỳ ${c.trieu(duBao)}` : ''}` : 'chưa đặt mục tiêu', 'var(--xanh)')}
       ${cot('Số ca chụp', tt.so_ca + ' ca', mt.so_ca ? tl(tt.so_ca, mt.so_ca) : null, `${tt.so_ca_da_chup} đã chụp${mt.so_ca ? ' · mục tiêu ' + mt.so_ca : ''}`, 'var(--tt8c)')}
       ${cot('Tỉ lệ bán thêm (phát sinh / tiền gói)', tt.upsell_pt != null ? tt.upsell_pt + '%' : '—', mt.upsell_pt && tt.upsell_pt != null ? tl(tt.upsell_pt, mt.upsell_pt) : null,
         `${tt.ca_co_upsell}/${tt.so_ca} ca có phát sinh · ${c.trieu(tt.phat_sinh)}`, 'var(--nhan)')}
     </div>
     <div class="ba-the">
-      <div class="the"><div class="mo">Dòng tiền tháng</div>
+      <div class="the"><div class="mo">Dòng tiền trong kỳ</div>
         <div class="gd"><span>Thực thu</span><b style="color:var(--xanh)">${c.tien(r.thuc_thu)}</b></div>
         <div class="gd"><span>Chi cửa hàng</span><b style="color:var(--do)">− ${c.tien(r.chi)}</b></div>
         <div class="gd"><span><b>Lãi tạm (thu − chi đã ghi)</b></span><b>${c.tien(laiTam)}</b></div>
@@ -79,20 +87,22 @@ export async function trangKeHoach(c, thang = c.homNay().slice(0, 7)) {
       <div class="the"><div class="mo">Theo hạng mục</div>
         <div class="cuon-doc" style="max-height:220px">${r.theo_hang_muc.map((h) => `<div class="gd"><span><b style="font-weight:600">${c.esc(h.ten)}</b><br><span class="mo nho">${h.so_ca} ca${h.upsell_pt != null ? ' · bán thêm ' + h.upsell_pt + '%' : ''}</span></span><b>${c.trieu(h.doanh_thu)}</b></div>`).join('') || '<div class="mo">Chưa có ca.</div>'}</div></div>
     </div>
-    <div class="the"><h2>Doanh thu theo ngày chụp</h2>
-      <div class="cuon-ngang"><div style="display:flex;gap:4px;align-items:flex-end;height:150px;min-width:${r.theo_ngay.length * 26}px">
-        ${r.theo_ngay.map((d) => `<a href="#/lich/${d.ngay}/ngay" title="${c.ngayVN(d.ngay)} · ${d.so_ca} ca · ${c.tien(d.doanh_thu)}" style="flex:1;min-width:20px;text-align:center;text-decoration:none">
-          <div style="height:${Math.round((n(d.doanh_thu) / maxNgay) * 120)}px;background:${d.ngay <= c.homNay() ? 'var(--nhan)' : 'var(--nhan-nhat)'};border-radius:5px 5px 0 0"></div>
-          <div class="mo" style="font-size:10px">${Number(d.ngay.slice(8))}</div></a>`).join('') || '<div class="mo">Chưa có ca trong tháng.</div>'}
+    <div class="the"><h2>Doanh thu theo ${theoThang ? 'tháng' : 'ngày chụp'}</h2>
+      <div class="cuon-ngang"><div style="display:flex;gap:4px;align-items:flex-end;height:150px;min-width:${cotNgay.length * 26}px">
+        ${cotNgay.map((d) => `<a href="${d.href}" title="${d.ten} · ${d.so_ca} ca · ${c.tien(d.doanh_thu)}" style="flex:1;min-width:20px;text-align:center;text-decoration:none">
+          <div style="height:${Math.round((n(d.doanh_thu) / maxNgay) * 120)}px;background:${d.xong ? 'var(--nhan)' : 'var(--nhan-nhat)'};border-radius:5px 5px 0 0"></div>
+          <div class="mo" style="font-size:10px">${d.nhan}</div></a>`).join('') || '<div class="mo">Chưa có ca trong kỳ.</div>'}
       </div></div><div class="mo nho">Cột đậm: đã chụp · cột nhạt: lịch đã chốt sắp tới.</div></div>
-    ${c.laChu() ? `<div class="the"><h2>Đặt mục tiêu tháng ${thang.slice(5)}/${thang.slice(0, 4)}</h2>
+    ${c.laChu() && !motThang ? '<div class="the mo">Đặt mục tiêu: chọn một tháng (bấm nhãn kỳ → T1…T12).</div>' : ''}
+    ${c.laChu() && motThang ? `<div class="the"><h2>Đặt mục tiêu tháng ${k.tu.slice(5, 7)}/${k.tu.slice(0, 4)}</h2>
       <div class="hai"><label>Doanh thu mục tiêu (đ)<input id="mt-dt" type="number" step="1000000" value="${mt.doanh_thu ?? ''}"></label>
         <label>Số ca mục tiêu<input id="mt-ca" type="number" value="${mt.so_ca ?? ''}"></label>
         <label>Tỉ lệ bán thêm mục tiêu (%)<input id="mt-up" type="number" step="0.5" value="${mt.upsell_pt ?? ''}"></label>
         <label>Ghi chú<input id="mt-ghi" value="${c.esc(mt.ghi_chu || '')}" placeholder="Chiến dịch tháng, ngày nghỉ…"></label></div>
       <div class="hang-nut" style="margin-top:10px"><button class="nut nho" id="mt-luu">Lưu mục tiêu</button></div></div>` : ''}`;
-  if (c.laChu()) c.$('#mt-luu').onclick = () => c.chay(async () => {
-    await c.kho.ham('crm_luu_muc_tieu', { p_thang: thang + '-01', d: { doanh_thu: c.$('#mt-dt').value, so_ca: c.$('#mt-ca').value, upsell_pt: c.$('#mt-up').value, ghi_chu: c.$('#mt-ghi').value }, p_ai: c.toi });
+  kh.ganKhoang(k, hn, (x) => '#/ke-hoach/' + x);
+  if (c.laChu() && motThang) c.$('#mt-luu').onclick = () => c.chay(async () => {
+    await c.kho.ham('crm_luu_muc_tieu', { p_thang: k.tu, d: { doanh_thu: c.$('#mt-dt').value, so_ca: c.$('#mt-ca').value, upsell_pt: c.$('#mt-up').value, ghi_chu: c.$('#mt-ghi').value }, p_ai: c.toi });
     c.bao('Đã lưu mục tiêu'); trangKeHoach(c, thang);
   });
 }
@@ -337,13 +347,14 @@ export async function trangChatLuong(c, thang = c.homNay().slice(0, 7)) {
 }
 
 // ═════════ CHI CỬA HÀNG ═════════
-export async function trangChi(c, thang = c.homNay().slice(0, 7)) {
-  const r = await c.kho.ham('crm_chi', { p_thang: thang + '-01' });
+export async function trangChi(c, chu) {
+  const hn = c.homNay(), k = kh.docKhoang(chu, hn), nhan = kh.nhanKhoang(k, hn), thang = k.chu, motThang = k.kieu === 'thang';
+  const r = await c.kho.ham('crm_chi_khoang', { p_tu: k.tu, p_den: k.den });
   const maxK = Math.max(1, ...r.theo_khoan.map((k) => n(k.tien)));
-  c.trang.innerHTML = c.dauTrang('Thu chi', 'Chi cửa hàng', 'Mỗi khoản chi một phiếu. Thu trừ chi ra lãi tạm của tháng — chỉ đúng khi ghi đủ.', navThang('#/chi', thang)) + `
+  c.trang.innerHTML = c.dauTrang('Thu chi', 'Chi cửa hàng', `Mỗi khoản chi một phiếu · ${nhan}. Thu trừ chi ra lãi tạm của kỳ — chỉ đúng khi ghi đủ.`, kh.cumKhoang(k, hn, (x) => '#/chi/' + x)) + `
     <div class="so-lieu bon">
-      ${c.theSo('#/cong-no/' + thang, 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Thực thu tháng', c.trieu(r.thu), 'từ sổ phiếu thu')}
-      ${c.theSo('#/chi/' + thang, 'vi', ['var(--do-nhat)', 'var(--do)'], 'Đã chi tháng', c.trieu(r.tong), r.so + ' phiếu chi')}
+      ${c.theSo('#/cong-no/' + thang, 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Thực thu', c.trieu(r.thu), 'từ sổ phiếu thu')}
+      ${c.theSo('#/chi/' + thang, 'vi', ['var(--do-nhat)', 'var(--do)'], 'Đã chi', c.trieu(r.tong), r.so + ' phiếu chi')}
       ${c.theSo('#/ke-hoach/' + thang, 'hd', ['var(--tt8n)', 'var(--tt8c)'], 'Lãi tạm (thu − chi)', c.trieu(n(r.thu) - n(r.tong)), 'chưa gồm khoản chưa ghi')}
       ${c.theSo('#/chi/' + thang, 'canh', ['var(--vang-nhat)', '#8A5A00'], 'Khoản chi lớn nhất', r.theo_khoan[0] ? KHOAN[r.theo_khoan[0].khoan_muc] : '—', r.theo_khoan[0] ? c.trieu(r.theo_khoan[0].tien) : 'chưa có phiếu')}
     </div>
@@ -359,8 +370,9 @@ export async function trangChi(c, thang = c.homNay().slice(0, 7)) {
           <div style="flex:1">${thanh((100 * n(k.tien)) / maxK, 'var(--do)')}</div><b style="width:80px;text-align:right">${c.trieu(k.tien)}</b></div>`).join('') || '<div class="mo">Chưa có.</div>'}</div></div>
       <div class="the"><h2>Sổ phiếu chi</h2><div class="cuon-doc">${r.ds.map((x) => `<div class="dong-phieu"><span class="ht ${x.hinh_thuc === 'tien_mat' ? 'tm' : ''}">${x.hinh_thuc === 'tien_mat' ? 'TM' : 'CK'}</span>
         <span><b>${c.esc(x.mo_ta)}</b><br><span class="mo nho">${c.ngayVN(x.ngay)} · ${KHOAN[x.khoan_muc]} · ${c.esc(x.ai)}${x.hop_dong_ma ? ' · ' + x.hop_dong_ma : ''}</span></span>
-        <span style="text-align:right"><b style="color:var(--do)">−${c.tien(x.so_tien)}</b>${c.laChu() ? `<br><a href="#" class="mo nho" data-xoa-chi="${x.id}">xoá</a>` : ''}</span></div>`).join('') || '<div class="trong">Chưa có phiếu chi trong tháng.</div>'}</div></div>
+        <span style="text-align:right"><b style="color:var(--do)">−${c.tien(x.so_tien)}</b>${c.laChu() ? `<br><a href="#" class="mo nho" data-xoa-chi="${x.id}">xoá</a>` : ''}</span></div>`).join('') || '<div class="trong">Chưa có phiếu chi trong kỳ.</div>'}</div></div>
     </div>`;
+  kh.ganKhoang(k, hn, (x) => '#/chi/' + x);
   if (c.coTien()) c.$('#ch-luu').onclick = () => c.chay(async () => {
     await c.kho.ham('crm_ghi_chi', { d: { ngay: c.$('#ch-ngay').value, khoan_muc: c.$('#ch-km').value, so_tien: c.$('#ch-tien').value, hinh_thuc: c.$('#ch-ht').value, mo_ta: c.$('#ch-mo').value }, p_ai: c.toi });
     c.bao('Đã ghi'); trangChi(c, thang);
@@ -528,21 +540,22 @@ export async function veHoSoThem(c, h, chua) {
 // Chỉ phần HOA HỒNG tự tính từ ekip của ca. Lương cứng · chấm công · thưởng · tăng ca vẫn ở app lương.
 // Chủ xem mọi người; nhân viên chỉ thấy dòng của mình (máy chủ lọc, không phải ẩn).
 const TEN_VAI = { sale_online: 'Sale online · giá gói', sale_offline: 'Sale tại studio · phát sinh', chup: 'Chụp · tổng hoá đơn', pts: 'PTS · tổng hoá đơn', stylist: 'Stylist · tổng hoá đơn' };
-export async function trangHoaHong(c, thang = c.homNay().slice(0, 7)) {
-  const r = await c.kho.ham('crm_hoa_hong', { p_thang: thang + '-01', p_ai: c.toi });
-  const mn = await c.kho.ham('crm_make_ngoai_thang', { p_thang: thang + '-01', p_ai: c.toi });   // null với người không phải chủ/sale
+export async function trangHoaHong(c, chu) {
+  const hn = c.homNay(), k = kh.docKhoang(chu, hn), nhan = kh.nhanKhoang(k, hn), thang = k.chu, motThang = k.kieu === 'thang';
+  const r = await c.kho.ham('crm_hoa_hong_khoang', { p_tu: k.tu, p_den: k.den, p_ai: c.toi });
+  const mn = await c.kho.ham('crm_make_ngoai_khoang', { p_tu: k.tu, p_den: k.den, p_ai: c.toi });   // null với người không phải chủ/sale
   const theNgoai = !mn ? '' : `<div class="the"><div class="dau-the"><h2>Thợ make cộng tác — phải trả ${c.tien(mn.tong_tien)}</h2></div>
-      <div class="mo nho" style="margin-bottom:6px">Tổng số mặt tháng này: <b>${Number(mn.mat.ngoai_lon) + Number(mn.mat.trong_lon)} người lớn · ${Number(mn.mat.ngoai_be) + Number(mn.mat.trong_be)} bé</b>
+      <div class="mo nho" style="margin-bottom:6px">Tổng số mặt · ${nhan}: <b>${Number(mn.mat.ngoai_lon) + Number(mn.mat.trong_lon)} người lớn · ${Number(mn.mat.ngoai_be) + Number(mn.mat.trong_be)} bé</b>
         (thợ ngoài ${mn.mat.ngoai_lon} + ${mn.mat.ngoai_be} · thợ nhà ${mn.mat.trong_lon} + ${mn.mat.trong_be}). Không cộng vào tổng hoa hồng.</div>
       ${mn.theo_tho.map((x) => `<div class="gd"><span><b style="font-weight:600">${c.esc(x.ten)}</b><br><span class="mo nho">${x.so_ca} ca · ${x.lon} người lớn · ${x.be} bé</span></span><b>${c.tien(x.tien)}</b></div>`).join('') || '<div class="mo">Chưa ghi thợ ngoài nào — ghi ở hồ sơ từng ca, thẻ "Thợ make cộng tác".</div>'}
       ${mn.ds.length ? `<details style="margin-top:8px"><summary class="mo nho">Từng ca (${mn.ds.length})</summary><div class="cuon-doc" style="max-height:260px">${mn.ds.map((x) => `<a class="gd" href="#/ca/${x.hop_dong_id}" style="text-decoration:none"><span>${c.ngayVN(x.ngay)} · ${c.esc(x.khach)}<br><span class="mo nho">${c.esc(x.ten)}</span></span><b>${x.lon}+${x.be} · ${c.tien(x.tien)}</b></a>`).join('')}</div></details>` : ''}</div>`;
   const pt =(x) => (Number(x) * 100).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + '%';
   c.trang.innerHTML = c.dauTrang('Thu chi', 'Lương & hoa hồng', r.la_chu
-    ? `Hoa hồng tự tính từ ekip từng ca có ngày chụp trong tháng. Lương cứng, chấm công, thưởng, tăng ca vẫn ở app lương.`
-    : `Hoa hồng của bạn trong tháng, tính từ các ca có tên bạn trong ekip. Thấy thiếu ca nào thì báo sale sửa ekip.`, navThang('#/hoa-hong', thang)) + `
+    ? `Hoa hồng tự tính từ ekip từng ca có ngày chụp trong kỳ · ${nhan}. Lương cứng, chấm công, thưởng, tăng ca vẫn ở app lương.`
+    : `Hoa hồng của bạn · ${nhan}, tính từ các ca có tên bạn trong ekip. Thấy thiếu ca nào thì báo sale sửa ekip.`, kh.cumKhoang(k, hn, (x) => '#/hoa-hong/' + x)) + `
     ${r.la_chu ? `<div class="so-lieu bon">
       ${c.theSo('#/hoa-hong/' + thang, 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Tổng hoa hồng phải trả', c.trieu(r.tong_hoa_hong), 'không gồm lương cố định của anh')}
-      ${c.theSo('#/hoa-hong/' + thang, 'lich', ['var(--tt8n)', 'var(--tt8c)'], 'Ca trong tháng', r.so_ca, c.trieu(r.tong_hoa_don) + ' tổng hoá đơn')}
+      ${c.theSo('#/hoa-hong/' + thang, 'lich', ['var(--tt8n)', 'var(--tt8c)'], 'Ca trong kỳ', r.so_ca, c.trieu(r.tong_hoa_don) + ' tổng hoá đơn')}
       ${c.theSo('#/hoa-hong/' + thang, 'hd', ['var(--nhan-nhat)', 'var(--nhan-dam)'], 'Tỉ lệ trên doanh thu', Number(r.tong_hoa_don) ? pt(Number(r.tong_hoa_hong) / Number(r.tong_hoa_don)) : '—', 'hoa hồng / tổng hoá đơn')}
       ${c.theSo('#/hoa-hong/' + thang, 'canh', ['var(--do-nhat)', 'var(--do)'], 'Ca thiếu ekip / tiền', (r.thieu || []).length, 'hoa hồng có thể bị sót')}
     </div>` : ''}
@@ -551,11 +564,12 @@ export async function trangHoaHong(c, thang = c.homNay().slice(0, 7)) {
       ${!x.nhan_hoa_hong ? `<div class="phu">Tham khảo: ${c.tien(x.tong)} nếu tính hoa hồng — không cộng vào tổng.</div>` : ''}
       <table>${x.vai.map((v) => `<tr><td>${TEN_VAI[v.vai] || v.vai}<br><span class="mo nho">${v.so_ca} ca · ${c.tien(v.mau)} × ${pt(v.ti_le)}</span></td><td class="so">${c.tien(v.tien)}</td></tr>`).join('')}
         ${x.make ? `<tr><td>Makeup<br><span class="mo nho">${x.make.lon} người lớn · ${x.make.be} trẻ em · ${x.make.so_ca} ca</span></td><td class="so">${x.make.tien == null ? '<span class="mo">chưa có đơn giá</span>' : c.tien(x.make.tien)}</td></tr>` : ''}</table>
-    </div>`).join('') || '<div class="trong">Chưa có ca nào có tên trong ekip tháng này.</div>'}</div>
+    </div>`).join('') || '<div class="trong">Chưa có ca nào có tên trong ekip trong kỳ này.</div>'}</div>
     ${theNgoai}
     ${r.la_chu && (r.thieu || []).length ? `<div class="the"><h2>Ca thiếu dữ liệu — hoa hồng có thể bị sót</h2><div class="mo nho" style="margin-bottom:6px">Ô trống có thể là anh tự làm (không tính) — chỉ cần soát cho chắc.</div>
       <div class="cuon-doc" style="max-height:320px">${r.thieu.map((t) => `<a class="gd" href="#/ca/${t.id}" style="text-decoration:none"><span>${c.ngayVN(t.ngay)} · ${t.ma}</span><span class="mo nho">${c.esc(t.ly_do)}</span></a>`).join('')}</div></div>` : ''}
     ${r.la_chu ? `<div class="the mo">Tỉ lệ đang dùng: ${Object.entries(r.ti_le || {}).map(([k, v]) => `${(TEN_VAI[k] || k).split(' · ')[0]} ${pt(v)}`).join(' · ')} · Mai stylist 2,5% · nhiều người cùng vai trong một ca ⇒ mỗi người 1/N (anh chốt 06/11). Đổi tỉ lệ thì nhắn trợ lý.</div>` : ''}`;
+  kh.ganKhoang(k, hn, (x) => '#/hoa-hong/' + x);
 }
 
 // ═════════ VIỆC CỦA TÔI — chế độ xem nhân viên (015, 09/11/2026) ═════════
