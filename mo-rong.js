@@ -929,3 +929,49 @@ export async function trangKpi(c, thangChon) {
       <b>đánh giá</b> = điểm khách chấm ở màn Chất lượng dịch vụ · <b>trả ảnh đúng hẹn</b> = ngày chuyển "Hoàn thành" so với hẹn trả ảnh, chỉ ca có đủ hai mốc ·
       <b>hoa hồng</b> = đúng số của màn Lương & hoa hồng.</div>`;
 }
+
+// ═════════ BÁN THÊM IN SAU CHỤP (031, 11/11/2026) ═════════
+// Ca đã chụp → chờ in/giao trong 60 ngày; ca CHƯA bán gì lên đầu, khâu "khách đang chọn ảnh" trước. Gợi ý nâng chất liệu
+// ảnh tặng / phóng thêm theo bảng giá in. App KHÔNG tự nhắn khách, KHÔNG tự thêm phát sinh: sale nhắn, ghi lại lần mời;
+// khách đồng ý thì thêm phát sinh ở hồ sơ ca như cũ.
+export async function trangBanThem(c, loc = '') {
+  const r = await c.kho.ham('crm_ban_them', { p_ai: c.toi });
+  if (!r) { c.trang.innerHTML = c.dauTrang('Bán hàng', 'Bán thêm in', 'Màn này dành cho sale online và anh Thọ.'); return; }
+  const t = r.tong, chi = loc === 'chua' ? r.ca.filter((x) => Number(x.phat_sinh) === 0) : r.ca;
+  const pt = (a, b) => (Number(b) ? Math.round((100 * Number(a)) / Number(b)) + '%' : '—');
+  const chip = (g) => g.loai === 'nang'
+    ? `Nâng ${g.co} ${c.esc(g.tu)} → <b>${c.esc(g.len)}</b> <span class="mo">+${c.tien(g.chenh)}</span>`
+    : `Phóng thêm ${g.co} <b>${c.esc(g.len)}</b> <span class="mo">${c.tien(g.gia_moi)}</span>`;
+  const the = (x) => `<div class="the-ca vien-tt${x.trang_thai}">
+      <div class="hang"><a class="ten" href="#/ca/${x.id}" style="text-decoration:none;color:inherit">${c.esc(x.khach)}</a>
+        <span class="phu" style="margin-left:auto">${c.ngayVN(x.ngay)} · ${c.esc(x.tt_ten)}</span></div>
+      <div class="phu">${c.esc(x.goi)}${x.tang ? ' · tặng ' + c.esc(x.tang) : ' · gói không tặng ảnh in'} · ${x.ma}</div>
+      <div class="phu">${Number(x.phat_sinh) ? `<b style="color:var(--xanh)">Đã bán thêm ${c.tien(x.phat_sinh)}</b>` : '<b style="color:var(--do)">Chưa bán thêm</b>'}
+        ${x.co_album ? (x.album_da_nhap ? ' · album đã vào hoá đơn' : ' · có album chọn ảnh') : ''}${Number(x.con_lai) ? ' · còn nợ ' + c.tien(x.con_lai) : ''}</div>
+      ${x.goi_y.length ? `<div style="display:flex;flex-direction:column;gap:3px;margin-top:2px">${x.goi_y.slice(0, 3).map((g) => `<span class="phu">• ${chip(g)}</span>`).join('')}</div>` : ''}
+      <div class="hang" style="margin-top:4px">${x.moi_luc ? `<span class="phu" style="color:${x.moi_gan ? 'var(--nhan-dam)' : 'inherit'}">Đã mời ${x.moi_luc}${x.moi_ket_qua ? ' · ' + c.esc(x.moi_ket_qua) : ''}</span>` : '<span class="phu">Chưa mời</span>'}
+        <button class="nut phu nho" style="margin-left:auto" data-moi="${x.id}">Ghi đã mời</button></div>
+    </div>`;
+  c.trang.innerHTML = c.dauTrang('Bán hàng', 'Bán thêm in sau chụp',
+    'Ca đã chụp tới chờ in/giao trong 60 ngày. Ca chưa bán gì lên đầu, khách đang chọn ảnh là lúc mời tốt nhất. Giá gợi ý là bảng giá in niêm yết — app không tự nhắn khách.',
+    `<a class="nut ${loc === 'chua' ? '' : 'phu'} nho" href="#/ban-them/chua">Chỉ ca chưa bán</a> <a class="nut ${loc === 'chua' ? 'phu' : ''} nho" href="#/ban-them">Tất cả</a>`) + `
+    <div class="so-lieu bon">
+      ${c.theSo('#/ban-them/chua', 'canh', ['var(--do-nhat)', 'var(--do)'], 'Ca chưa bán thêm', t.chua_ban, `trên ${t.so_ca} ca đã chụp trong 60 ngày`)}
+      ${c.theSo('#/ban-them', 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Phát sinh đã bán', c.trieu(t.phat_sinh), `${pt(t.phat_sinh, t.tien_goi)} tiền gói · ${t.da_ban} ca`)}
+      ${c.theSo('#/ban-them/chua', 'hd', ['var(--nhan-nhat)', 'var(--nhan-dam)'], 'Sàn nếu mỗi ca nâng 1 bậc', c.trieu(t.san_neu_nang), 'mỗi ca chưa bán nhận gợi ý rẻ nhất')}
+      ${c.theSo('#/ban-them', 'gui', ['var(--tt8n)', 'var(--tt8c)'], 'Đã mời 7 ngày qua', t.moi_7_ngay, 'không nhắn lại khách vừa mời')}
+    </div>
+    <div class="luoi-ca" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))">${chi.map(the).join('') || '<div class="trong">Không có ca nào trong danh sách.</div>'}</div>`;
+  c.trang.querySelectorAll('[data-moi]').forEach((b) => (b.onclick = () => {
+    const x = r.ca.find((y) => y.id === Number(b.dataset.moi));
+    const { g, dong } = hop(c, 'Ghi lần mời — ' + x.khach, `
+      <p class="mo" style="margin-top:0">Ghi sau khi anh/chị đã nhắn khách, để người khác không nhắn trùng. Khách đồng ý thì thêm phát sinh ở hồ sơ ca.</p>
+      <label>Đã mời gì<textarea id="moi-nd" rows="2" style="width:100%">${c.esc(x.goi_y[0] ? x.goi_y[0].loai === 'nang' ? `Nâng ${x.goi_y[0].co} ${x.goi_y[0].tu} lên ${x.goi_y[0].len}` : `Phóng thêm ${x.goi_y[0].co} ${x.goi_y[0].len}` : '')}</textarea></label>
+      <label>Kết quả<select id="moi-kq"><option value="">Chờ khách trả lời</option><option>Khách đồng ý</option><option>Khách cân nhắc</option><option>Khách không lấy</option></select></label>
+      <div class="hang-nut" style="margin-top:10px;justify-content:flex-end"><button class="nut nho" id="moi-luu">Lưu</button></div>`);
+    g.querySelector('#moi-luu').onclick = () => c.chay(async () => {
+      await c.kho.ham('crm_ghi_moi_in', { p_id: x.id, p_noi_dung: g.querySelector('#moi-nd').value, p_ket_qua: g.querySelector('#moi-kq').value || null, p_ai: c.toi });
+      dong(); c.bao('Đã ghi lần mời'); trangBanThem(c, loc);
+    });
+  }));
+}
