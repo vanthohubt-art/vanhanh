@@ -846,25 +846,30 @@ export async function trangCuaToi(c) {
     </div>`;
 }
 
-// ═════════ CHI TIẾT PHÁT SINH CA NHẬP SỔ — hỏi sale trước khi dựng phiếu (anh Thọ 11/11/2026) ═════════
+// ═════════ CHI TIẾT PHÁT SINH CA NHẬP SỔ — sale soát trước khi dựng phiếu (anh Thọ 11/11/2026) ═════════
 // Sổ chỉ có tổng tiền phát sinh; máy tách sẵn từ cột Ghi chú của sổ, sale soát/sửa (mỗi dòng một món) rồi mới dựng phiếu.
-// Lưu trên máy này theo mã HĐ để lần sau khỏi gõ lại. Trả về mảng dòng, hoặc null nếu sale đóng hộp.
-export function hoiPsSoCu(c, h, tachSan) {
-  const khoa = 'ps-in-' + h.ma;
-  let cu = null; try { cu = JSON.parse(localStorage.getItem(khoa) || 'null'); } catch { /* bỏ qua */ }
-  const dong = Array.isArray(cu) ? cu : tachSan;
+// Bản sale sửa LƯU CHUNG (029 · hop_dong.ps_in_khach, anh Thọ "Có, lưu chung") ⇒ máy nào mở cũng thấy, lần sau khỏi gõ lại.
+// daLuu = bản đã lưu (null nếu chưa). Trả về mảng dòng, hoặc null nếu đóng hộp.
+export function hoiPsSoCu(c, h, tachSan, daLuu) {
+  const coLuu = Array.isArray(daLuu) && daLuu.length > 0;
+  const dong = coLuu ? daLuu : tachSan;
   const tong = h.phatSinh.reduce((a, p) => a + Number(p.thanh_tien || 0), 0);
   return new Promise((xong) => {
     const { g, dong: tat } = hop(c, 'Chi tiết phát sinh in lên phiếu', `
-      <p class="mo" style="margin-top:0">Ca nhập từ sổ chỉ có tổng phát sinh <b>${c.esc(tong.toLocaleString('vi-VN'))}đ</b>. Máy tách sẵn từ cột Ghi chú của sổ — anh/chị sửa cho khách đọc được, <b>mỗi dòng một món</b>. Để trống thì phiếu in "In ảnh, dịch vụ ngoài gói".</p>
-      <textarea id="ps-in" rows="7" style="width:100%">${c.esc(dong.join('\n'))}</textarea>
-      <div class="hang-nut" style="margin-top:10px;justify-content:flex-end"><button class="nut nho" id="ps-dung">Dựng phiếu</button></div>`);
+      <p class="mo" style="margin-top:0">Ca nhập từ sổ chỉ có tổng phát sinh <b>${c.esc(tong.toLocaleString('vi-VN'))}đ</b>.
+      ${coLuu ? 'Đây là bản đã lưu lần trước.' : 'Máy tách sẵn từ cột Ghi chú của sổ — anh/chị sửa cho khách đọc được.'}
+      <b>Mỗi dòng một món.</b> Để trống thì phiếu in "In ảnh, dịch vụ ngoài gói". Bấm nút dưới là lưu chung cho mọi máy.</p>
+      <textarea id="ps-so-in" rows="7" style="width:100%">${c.esc(dong.join('\n'))}</textarea>
+      <div class="hang-nut" style="margin-top:10px;justify-content:flex-end"><button class="nut nho" id="ps-dung">Lưu và dựng phiếu</button></div>`);
     let daXong = false;
     const ra = (v) => { if (!daXong) { daXong = true; xong(v); } };
     new MutationObserver((_, o) => { if (!g.isConnected) { o.disconnect(); ra(null); } }).observe(document.body, { childList: true });
-    g.querySelector('#ps-dung').onclick = () => {
-      const v = g.querySelector('#ps-in').value.split('\n').map((s) => s.trim()).filter(Boolean);
-      try { localStorage.setItem(khoa, JSON.stringify(v)); } catch { /* bỏ qua */ }
+    const nut = g.querySelector('#ps-dung');
+    nut.onclick = async () => {
+      const v = g.querySelector('#ps-so-in').value.split('\n').map((s) => s.trim()).filter(Boolean);
+      nut.disabled = true;
+      try { await c.kho.ham('crm_luu_ps_in', { p_id: h.id, p_dong: v, p_ai: c.toi }); }
+      catch (e) { nut.disabled = false; c.bao(e.message || String(e), true); return; }
       ra(v); tat();
     };
   });
