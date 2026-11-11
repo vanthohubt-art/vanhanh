@@ -4,7 +4,7 @@
 
 import { TAI_KHOAN_NHAN } from './cau-hinh.js?v=20261109h';
 import { chuoiVietQR, noiDungCK } from './vietqr.js?v=20261109b';
-import { goiGom } from './goi-gom.js?v=20261111a';
+import { goiGom, tenGoi } from './goi-gom.js?v=20261111c';
 
 // Điều khoản in cuối hợp đồng (cọc, đổi lịch, huỷ, thời hạn giữ file…). ĐỂ TRỐNG cho tới khi anh Thọ chốt câu chữ —
 // trợ lý KHÔNG tự viết điều khoản. Mỗi phần tử là một câu; mảng rỗng thì không in mục này.
@@ -42,7 +42,7 @@ const PS_SO_CU = 'Phát sinh ghi trong sổ cũ (chi tiết xem ghi chú hợp �
 export function dongHoaDon(h) {
   const giaGoi = Number(h.tien.tien_goi) + Number(h.giam_gia || 0), giam = Number(h.giam_gia || 0);
   const goiChiTiet = goiGom(h).concat(h.anhChon && h.anhChon.length ? ['Concept / makeup đã chọn: ' + h.anhChon.join(', ')] : []);
-  const hang = [{ ten: h.goi_ten, chiTiet: goiChiTiet, donGia: giaGoi, sl: 1, uuDai: giam, thanhTien: giaGoi - giam, la: 'goi' }];
+  const hang = [{ ten: tenGoi(h), chiTiet: goiChiTiet, donGia: giaGoi, sl: 1, uuDai: giam, thanhTien: giaGoi - giam, la: 'goi' }];
   for (const p of h.phatSinh || []) {
     const soCu = p.mo_ta === PS_SO_CU, sl = soCu ? 1 : Number(p.so_luong) || 1;
     hang.push({ ten: soCu ? 'Phát sinh thêm' : p.mo_ta, chiTiet: soCu ? ['In ảnh, dịch vụ ngoài gói'] : [],

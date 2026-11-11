@@ -7,7 +7,7 @@
 
 export const TEN_CL = { UV: 'phủ UV', GO: 'gỗ Lami', TT: 'thuỷ tinh', MICA: 'mica gương', G4K: 'gương 4K', KC: 'kim cương', LED: 'LED 8K' };
 
-const NOI_BO = /bảng giá|phat_sinh|nhập sổ|phân tích|đang lỗ|chưa có|chưa ghi|chưa chốt|dòng family|tiết kiệm|giá mua riêng|chỉ lấy file/i;
+const NOI_BO = /bảng giá|phat_sinh|nhập sổ|phân tích|đang lỗ|chưa có|chưa ghi|chưa chốt|dòng family|tiết kiệm|giá mua riêng|chỉ lấy file|wiki|giá theo|\/người|không xác định/i;
 const BAN_THEM = /^thêm\s/i;
 
 /** Các câu khách nên đọc trong goi.noi_dung. */
@@ -18,6 +18,13 @@ export function cauChoKhach(noiDung) {
     .map((c) => c.trim().replace(/\.$/, ''))
     .filter((c) => c && !NOI_BO.test(c) && !BAN_THEM.test(c))
     .map((c) => c.replace(/\bKHÔNG\b/g, 'không'));
+}
+
+/** Tên gói in cho khách. Soát 1.448 hợp đồng thật 11/11/2026: tên gói danh mục có ghi chú nội bộ ("Beauty (sổ cũ, không rõ
+ *  bậc)", "Phóng sự cưới cũ – Gói 1") và gói KHAC = ca nhập sổ không xác định được gói ⇒ không in chữ "Khác" lên phiếu. */
+export function tenGoi(h) {
+  if (h.goi_ma === 'KHAC' || !h.goi_ten) return 'Dịch vụ Home Studio';
+  return String(h.goi_ten).replace(/\s*\([^()]*(?:sổ cũ|không rõ)[^()]*\)/gi, '').replace(/\s+cũ(?=\s*[–-]|$)/i, '').trim();
 }
 
 /** Danh sách dòng "Gói gồm" từ chi tiết hợp đồng (crm_chi_tiet). */
