@@ -769,7 +769,9 @@ function trangDangNhap(loi) {
         <button class="nut" type="submit">Vào</button>
       </form>
       ${loi ? `<p style="color:var(--do)">${esc(loi)}</p>` : ''}
+      ${laAppCai() ? '' : '<p class="mo nho" style="margin-top:14px"><a href="#" id="cai-app-dn">📱 Cài app lên điện thoại</a> — lần sau bấm biểu tượng là vào, không cần mở web gõ lại.</p>'}
     </div>`;
+  const nutCaiDn = $('#cai-app-dn'); if (nutCaiDn) nutCaiDn.onclick = (e) => { e.preventDefault(); moHuongDanCai(); };
   $('#dn').onsubmit = (e) => {
     e.preventDefault();
     chay(async () => {
@@ -800,6 +802,31 @@ function trangMatKhau() {
   };
 }
 
+// ═════════ CÀI APP LÊN ĐIỆN THOẠI (PWA, 11/11/2026 — anh Thọ: "tạo bản trên điện thoại để không phải đăng nhập bằng web") ═════════
+// Mở từ biểu tượng trên màn hình chính: toàn màn hình, không thanh địa chỉ, đăng nhập MỘT lần rồi giữ (Supabase tự làm mới phiên).
+// Android/Chrome: dùng hộp cài sẵn của trình duyệt (beforeinstallprompt). iPhone: Safari không có hộp cài ⇒ hiện hướng dẫn.
+let nhacCai = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); nhacCai = e; });
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+function laAppCai() { return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; }
+async function moHuongDanCai() {
+  if (nhacCai) { nhacCai.prompt(); try { await nhacCai.userChoice; } catch { /* bỏ qua */ } nhacCai = null; return; }
+  const ua = navigator.userAgent, iOS = /iPhone|iPad|iPod/i.test(ua), trongApp = /Zalo|FBAN|FBAV|Messenger|Lark|Instagram/i.test(ua);
+  const nen = document.createElement('div'); nen.className = 'hop-nen';
+  nen.innerHTML = `<div class="hop" role="dialog" aria-label="Cài app lên điện thoại" style="flex-basis:460px">
+    <div class="dau-the"><h2>Cài app lên điện thoại</h2><button class="nut phu nho phai" data-dong>Đóng</button></div>
+    ${trongApp ? '<p class="canh">Bạn đang mở trong Zalo/Messenger — bấm ⋯ → <b>Mở bằng trình duyệt</b> (iPhone: Safari, Android: Chrome) rồi làm lại.</p>' : ''}
+    <p><b>iPhone (Safari):</b></p>
+    <ol style="margin-top:0"><li>Bấm nút <b>Chia sẻ</b> (ô vuông có mũi tên lên) ở thanh dưới.</li><li>Kéo xuống, chọn <b>Thêm vào MH chính</b>.</li><li>Bấm <b>Thêm</b>.</li></ol>
+    <p><b>Android (Chrome):</b></p>
+    <ol style="margin-top:0"><li>Bấm <b>⋮</b> góc trên bên phải.</li><li>Chọn <b>Cài đặt ứng dụng</b> (hoặc <b>Thêm vào màn hình chính</b>).</li></ol>
+    <p class="mo">Sau đó mở bằng biểu tượng <b>Home Studio</b> trên màn hình, đăng nhập một lần — lần sau vào thẳng, không cần gõ lại.${iOS ? ' Trên iPhone, app cài vào có phiên đăng nhập riêng nên phải đăng nhập lại một lần trong app.' : ''}</p>
+  </div>`;
+  nen.onclick = (e) => { if (e.target === nen) nen.remove(); };
+  nen.querySelector('[data-dong]').onclick = () => nen.remove();
+  document.body.appendChild(nen);
+}
+
 async function vaoApp() {
   if (kho.THAT) {
     const t = await kho.toi();
@@ -808,7 +835,9 @@ async function vaoApp() {
     $('#toi').hidden = true;
     $('#nguoi').hidden = false;
     $('#nguoi').innerHTML = `<div class="ten-toi">${esc(t.nhan_su?.ten || t.email)}</div><div class="mo nho">${(vaiToi.includes('chu') ? 'Chủ studio' : vaiToi.map((v) => VAI[v] || (v === 'sale_online' ? 'Sale online' : v)).join(' · ')) || 'chưa gắn vai'}</div>
-      <div style="margin-top:6px"><a href="#/mat-khau">Đổi mật khẩu</a> · <a href="#" id="thoat">Thoát</a></div>`;
+      <div style="margin-top:6px"><a href="#/mat-khau">Đổi mật khẩu</a> · <a href="#" id="thoat">Thoát</a></div>
+      ${laAppCai() ? '' : '<div style="margin-top:6px"><a href="#" id="cai-app">📱 Cài lên điện thoại</a></div>'}`;
+    const nutCai = $('#cai-app'); if (nutCai) nutCai.onclick = (e) => { e.preventDefault(); moHuongDanCai(); };
     $('#thoat').onclick = (e) => { e.preventDefault(); chay(async () => { await kho.dangXuat(); trangDangNhap(); }); };
   } else {
     toi = localStorage.getItem('toi') || '';
