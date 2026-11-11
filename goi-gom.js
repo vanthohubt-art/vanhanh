@@ -56,11 +56,12 @@ export function psTuSo(gc) {
   if (!s) return [];
   s = s.replace(/(lên|sang|gương|led)\s+([48])k(?![a-zà-ỹ])/gi, (x, tu, so) => `${tu} §${so}§`);   // "lên 4k" là chất liệu gương 4K, không phải 4.000đ
   // cắt dòng sau mỗi cụm tiền ("= 800k", ": 1tr6", "300k") và ở dấu ; , xuống dòng
+  s = s.replace(/\bgoox\b/gi, 'gỗ').replace(/\blene\b/gi, 'lên').replace(/\btajwng\b/gi, 'tặng').replace(/(^|\s)đôi(?=\s)/gi, '$1đổi');   // gõ nhầm hay gặp trong sổ
   s = s.replace(TIEN_TAT, (all, so, dv) => ` = ${doiTien(so, dv)}\n`);
-  return s.split(/\n|;|(?:^|\s),\s/).map((d) => d.replace(/^[\s,:=-]+|[\s,:]+$/g, '').replace(/\s*:\s*=/, ' =').replace(/\s+/g, ' ').trim()).filter(Boolean)
+  return s.split(/\n|;|(?:^|\s),\s|\.\s+|\s(?=(?:Tặng|tặng|Thêm|Đổi|đổi)\s)/).map((d) => d.replace(/^[\s,:=-]+|[\s,:]+$/g, '').replace(/\s*:\s*=/, ' =').replace(/\s+/g, ' ').trim()).filter(Boolean)
     .map((d) => d
       .replace(/(?:gương |led )?§4§/gi, 'gương 4K').replace(/(?:gương |led )?§8§/gi, 'LED 8K').replace(/\btkm\s?(\d+)/gi, '(mẫu TKM$1)').replace(/\bthủy tinh\b/gi, 'thuỷ tinh')
       .replace(/\bmake\b(?!up)/gi, 'makeup').replace(/^(đi|di) lại/i, 'Phí đi lại')
-      .replace(/^(?:đổi|đôi)?\s*(\d+x\d+(?:\s+(?:gỗ|mica|UV|thuỷ tinh))?)\s+(lên|sang)\s+/i, (a, co, _x) => `Nâng ảnh ${co} lên `)
+      .replace(/^(?:đổi|đôi)?\s*(\d+x\d+(?:\s+(?:gỗ|mica|UV|thuỷ tinh))?)\s+(lên|sang)\s+/i, (a, co, tu) => (/sang/i.test(tu) ? `Đổi ảnh ${co} sang ` : `Nâng ảnh ${co} lên `))
       .replace(/^./, (c) => c.toUpperCase()));
 }

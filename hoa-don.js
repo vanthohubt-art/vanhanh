@@ -4,7 +4,7 @@
 
 import { TAI_KHOAN_NHAN } from './cau-hinh.js?v=20261109h';
 import { chuoiVietQR, noiDungCK } from './vietqr.js?v=20261109b';
-import { goiGom, tenGoi } from './goi-gom.js?v=20261111d';
+import { goiGom, tenGoi } from './goi-gom.js?v=20261111e';
 
 // Điều khoản in cuối hợp đồng (cọc, đổi lịch, huỷ, thời hạn giữ file…). ĐỂ TRỐNG cho tới khi anh Thọ chốt câu chữ —
 // trợ lý KHÔNG tự viết điều khoản. Mỗi phần tử là một câu; mảng rỗng thì không in mục này.
