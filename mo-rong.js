@@ -874,3 +874,57 @@ export function hoiPsSoCu(c, h, tachSan, daLuu) {
     };
   });
 }
+
+// ═════════ KPI TỪNG NHÂN VIÊN (030, 11/11/2026) ═════════
+// Một tháng (theo ngày chụp). Gom từ dữ liệu sẵn có: ca tham gia, doanh số sale, bán thêm, đánh giá khách, trả ảnh đúng hẹn,
+// makeup, khách tiềm năng, hoa hồng (lấy nguyên từ crm_hoa_hong). Chỗ chưa đủ dữ liệu in "chưa đo được", không in 0.
+// Chủ xem mọi người + tổng đội; nhân viên chỉ thấy thẻ của mình (máy chủ lọc).
+const TEN_VAI_KPI = { sale_online: 'sale online', sale_offline: 'bán thêm', chup: 'chụp', pts: 'PTS', stylist: 'stylist', makeup: 'makeup' };
+export async function trangKpi(c, thangChon) {
+  const thang = /^\d{4}-\d{2}$/.test(thangChon || '') ? thangChon : c.homNay().slice(0, 7);
+  const r = await c.kho.ham('crm_kpi', { p_thang: thang + '-01', p_ai: c.toi });
+  const doiThang = (n) => { const d = new Date(thang + '-01T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); return d.toISOString().slice(0, 7); };
+  const nhan = `tháng ${Number(thang.slice(5))}/${thang.slice(0, 4)}`;
+  const tp = (x) => Number(x).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
+  const pt = (a, b) => (Number(b) ? Math.round((100 * Number(a)) / Number(b)) + '%' : '—');
+  const lech = (nay, truoc) => { const a = Number(nay), b = Number(truoc); if (!b) return ''; const d = a - b;
+    return ` <span class="mo nho" style="color:${d > 0 ? 'var(--xanh)' : d < 0 ? 'var(--do)' : 'inherit'}">${d > 0 ? '▲' : d < 0 ? '▼' : '='} ${Math.abs(d)} so với tháng trước</span>`; };
+  const dong = (ten, gt, phu = '') => `<tr><td>${ten}${phu ? `<br><span class="mo nho">${phu}</span>` : ''}</td><td class="so">${gt}</td></tr>`;
+  const the = (x) => {
+    const d = [];
+    d.push(dong('Ca tham gia', `<b>${x.so_ca}</b>`, Object.entries(x.theo_vai || {}).map(([v, n]) => `${TEN_VAI_KPI[v] || v} ${n}`).join(' · ') + lech(x.so_ca, x.so_ca_truoc)));
+    if (x.sale) d.push(dong('Sale online · doanh số', c.tien(x.sale.doanh_so),
+      `${x.sale.so_hd} HĐ · ${tp(x.sale.ti_le_co_ps)}% ca có phát sinh · phát sinh TB ${c.tien(x.sale.ps_tb)}/ca${Number(x.sale.giam_tb_pt) ? ` · giảm giá TB ${tp(x.sale.giam_tb_pt)}%` : ''}`));
+    if (x.ban_them) d.push(dong('Bán thêm tại studio', c.tien(x.ban_them.phat_sinh_phan_minh),
+      `${x.ban_them.so_ca} ca${Number(x.ban_them.ca_khong_ps) ? ` · <span style="color:var(--do)">${x.ban_them.ca_khong_ps} ca không bán được gì</span>` : ''} · phần của bạn khi nhiều người cùng ca`));
+    if (x.tho) d.push(dong('Doanh thu các ca đã làm', c.tien(x.tho.doanh_thu_ca),
+      `${x.tho.so_danh_gia ? `khách chấm TB <b>${tp(x.tho.diem_tb)} ★</b> (${x.tho.so_danh_gia} đánh giá${Number(x.tho.danh_gia_thap) ? `, <span style="color:var(--do)">${x.tho.danh_gia_thap} đánh giá ≤ 3 sao</span>` : ''})` : 'chưa có đánh giá của khách'}${Number(x.tho.can_sua_lai) ? ` · <span style="color:var(--do)">${x.tho.can_sua_lai} ca cần sửa lại</span>` : ''}`));
+    if (x.tra_anh) {
+      const t = x.tra_anh, ok = Number(t.do_duoc) > 0;
+      d.push(dong('Trả ảnh đúng hẹn (PTS)', ok ? `<b>${pt(t.dung_hen, t.do_duoc)}</b>` : '<span class="mo">chưa đo được</span>',
+        `${ok ? `${t.dung_hen}/${t.do_duoc} ca đúng hẹn${Number(t.tre) ? ` · <span style="color:var(--do)">${t.tre} trễ</span>` : ''} · ` : 'cần cả hẹn trả ảnh và lúc trả thật (có từ 09/11) · '}`
+        + `${t.so_ca} ca PTS${Number(t.dang_qua_hen) ? ` · <span style="color:var(--do)">${t.dang_qua_hen} đang quá hẹn</span>` : ''}${Number(t.chua_co_hen) ? ` · ${t.chua_co_hen} ca chưa ghi hẹn` : ''}`));
+    }
+    if (x.make) d.push(dong('Makeup', `${Number(x.make.lon) + Number(x.make.be)} mặt`, `${x.make.lon} người lớn · ${x.make.be} bé · ${x.make.so_ca} ca`));
+    if (x.lead) d.push(dong('Khách tiềm năng được giao', `<b>${pt(x.lead.chot, Number(x.lead.chot) + Number(x.lead.mat))}</b> chốt`,
+      `${x.lead.so} khách mới trong tháng · ${x.lead.chot} chốt · ${x.lead.mat} mất · ${x.lead.dang_mo} đang tư vấn`));
+    if (x.hoa_hong != null) d.push(dong('Hoa hồng', x.nhan_hoa_hong ? c.tien(x.hoa_hong) : '<span class="mo">lương cố định</span>', '<a href="#/hoa-hong">xem chi tiết từng vai</a>'));
+    return `<div class="the-ca" style="border-left-color:var(--nhan)"><div class="hang"><span class="ten">${c.esc(x.ten)}</span>
+      <span class="phu" style="margin-left:auto">${(x.vai_chinh || []).filter((v) => v !== 'chu').map((v) => TEN_VAI_KPI[v] || v).join(' · ')}</span></div>
+      <table>${d.join('')}</table></div>`;
+  };
+  const o = r.doi;
+  c.trang.innerHTML = c.dauTrang('Thu chi', r.la_chu ? 'KPI nhân viên' : 'KPI của tôi',
+    `${r.la_chu ? 'Mỗi người một thẻ' : 'Số của riêng bạn'} · ${nhan}, tính theo ngày chụp, bỏ hợp đồng đã huỷ. Gom từ dữ liệu đang có trong app — không ai phải nhập thêm.`,
+    `<a class="nut phu nho" href="#/kpi/${doiThang(-1)}">‹ Tháng trước</a> <a class="nut phu nho" href="#/kpi/${doiThang(1)}">Tháng sau ›</a>`) + `
+    ${o ? `<div class="so-lieu bon">
+      ${c.theSo('#/kpi/' + thang, 'lich', ['var(--tt8n)', 'var(--tt8c)'], 'Ca trong tháng', o.so_ca, `tháng trước ${o.so_ca_truoc}`)}
+      ${c.theSo('#/kpi/' + thang, 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Doanh thu ca', c.trieu(o.doanh_thu), `phát sinh ${pt(o.phat_sinh, o.tien_goi)} tiền gói`)}
+      ${c.theSo('#/chat-luong', 'sao', ['var(--vang-nhat)', '#8A5A00'], 'Khách chấm TB', o.diem_tb != null ? tp(o.diem_tb) + ' ★' : '—', `${o.so_danh_gia} đánh giá`)}
+      ${c.theSo('#/hoa-hong/' + thang, 'canh', ['var(--do-nhat)', 'var(--do)'], 'Ca thiếu người', Number(o.ca_thieu_sale) + Number(o.ca_thieu_tho), `${o.ca_thieu_sale} thiếu sale · ${o.ca_thieu_tho} thiếu thợ chụp — KPI sẽ sót`)}
+    </div>` : ''}
+    <div class="luoi-ca" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr))">${r.nguoi.map(the).join('') || '<div class="trong">Chưa có ca nào có tên bạn trong tháng này.</div>'}</div>
+    <div class="the mo">Cách đo: <b>doanh số sale</b> = tổng hoá đơn các HĐ mình là sale online · <b>bán thêm</b> = phát sinh của ca mình tick sale tại studio (chia đều khi nhiều người) ·
+      <b>đánh giá</b> = điểm khách chấm ở màn Chất lượng dịch vụ · <b>trả ảnh đúng hẹn</b> = ngày chuyển "Hoàn thành" so với hẹn trả ảnh, chỉ ca có đủ hai mốc ·
+      <b>hoa hồng</b> = đúng số của màn Lương & hoa hồng.</div>`;
+}
