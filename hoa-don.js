@@ -4,7 +4,7 @@
 
 import { TAI_KHOAN_NHAN } from './cau-hinh.js?v=20261109h';
 import { chuoiVietQR, noiDungCK } from './vietqr.js?v=20261109b';
-import { goiGom, tenGoi } from './goi-gom.js?v=20261111c';
+import { goiGom, tenGoi } from './goi-gom.js?v=20261111d';
 
 // Điều khoản in cuối hợp đồng (cọc, đổi lịch, huỷ, thời hạn giữ file…). ĐỂ TRỐNG cho tới khi anh Thọ chốt câu chữ —
 // trợ lý KHÔNG tự viết điều khoản. Mỗi phần tử là một câu; mảng rỗng thì không in mục này.
@@ -35,7 +35,7 @@ function catDong(ctx, chu, rong) {
 }
 
 // Phát sinh nhập từ sổ Sheet chỉ có TỔNG tiền, chi tiết nằm ở ghi chú nội bộ ⇒ in tên dễ hiểu cho khách, không in ghi chú.
-const PS_SO_CU = 'Phát sinh ghi trong sổ cũ (chi tiết xem ghi chú hợp đồng)';
+export const PS_SO_CU = 'Phát sinh ghi trong sổ cũ (chi tiết xem ghi chú hợp đồng)';
 
 /** Các dòng của phiếu thanh toán gửi khách, từ chi tiết hợp đồng (kho.chiTiet). Tách riêng để phép thử gọi được.
  *  Bố cục bảng theo mẫu anh Thọ gửi 11/11/2026: STT · Dịch vụ / sản phẩm (kèm gạch đầu dòng) · Đơn giá · SL · Ưu đãi · Thành tiền. */
@@ -45,7 +45,7 @@ export function dongHoaDon(h) {
   const hang = [{ ten: tenGoi(h), chiTiet: goiChiTiet, donGia: giaGoi, sl: 1, uuDai: giam, thanhTien: giaGoi - giam, la: 'goi' }];
   for (const p of h.phatSinh || []) {
     const soCu = p.mo_ta === PS_SO_CU, sl = soCu ? 1 : Number(p.so_luong) || 1;
-    hang.push({ ten: soCu ? 'Phát sinh thêm' : p.mo_ta, chiTiet: soCu ? ['In ảnh, dịch vụ ngoài gói'] : [],
+    hang.push({ ten: soCu ? 'Phát sinh thêm' : p.mo_ta, chiTiet: soCu ? (h.psChiTiet && h.psChiTiet.length ? h.psChiTiet : ['In ảnh, dịch vụ ngoài gói']) : [],
       donGia: soCu ? Number(p.thanh_tien) : Number(p.don_gia), sl, uuDai: 0, thanhTien: Number(p.thanh_tien) });
   }
   const thu = (h.phieuThu || []).filter((p) => !p.huy && !p.dao).map((p) => ({

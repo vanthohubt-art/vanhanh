@@ -3,8 +3,9 @@
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
 import * as kho from './kho.js?v=20261110i';
-import { moHoaDon, moQrThu } from './hoa-don.js?v=20261111c';
-import * as mr from './mo-rong.js?v=20261110i';
+import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261111d';
+import { psTuSo, ghiChuSo } from './goi-gom.js?v=20261111d';
+import * as mr from './mo-rong.js?v=20261111d';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
@@ -422,6 +423,11 @@ async function trangCa(id) {
   });
   if (coTien()) {
     $('#anh-hd').onclick = () => chay(async () => {   // tên concept / makeup khách đã chọn in vào mục Gói dịch vụ
+      if (h.phatSinh.some((p) => p.mo_ta === PS_SO_CU)) {   // ca nhập sổ: sale soát chi tiết phát sinh trước
+        const ps = await mr.hoiPsSoCu(ctx(), h, psTuSo(ghiChuSo(h.ghi_chu)));
+        if (!ps) return;
+        h.psChiTiet = ps;
+      }
       try { h.anhChon = (await kho.ham('crm_ca_them', { p_id: id, p_ai: toi })).anh_mau.map((a) => a.ten); } catch { h.anhChon = []; }
       await moHoaDon(h);
     });

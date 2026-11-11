@@ -845,3 +845,27 @@ export async function trangCuaToi(c) {
         : '<div class="the"><div class="trong">Không có ca nào đang chờ khâu của bạn ✓</div></div>'}</div>
     </div>`;
 }
+
+// ═════════ CHI TIẾT PHÁT SINH CA NHẬP SỔ — hỏi sale trước khi dựng phiếu (anh Thọ 11/11/2026) ═════════
+// Sổ chỉ có tổng tiền phát sinh; máy tách sẵn từ cột Ghi chú của sổ, sale soát/sửa (mỗi dòng một món) rồi mới dựng phiếu.
+// Lưu trên máy này theo mã HĐ để lần sau khỏi gõ lại. Trả về mảng dòng, hoặc null nếu sale đóng hộp.
+export function hoiPsSoCu(c, h, tachSan) {
+  const khoa = 'ps-in-' + h.ma;
+  let cu = null; try { cu = JSON.parse(localStorage.getItem(khoa) || 'null'); } catch { /* bỏ qua */ }
+  const dong = Array.isArray(cu) ? cu : tachSan;
+  const tong = h.phatSinh.reduce((a, p) => a + Number(p.thanh_tien || 0), 0);
+  return new Promise((xong) => {
+    const { g, dong: tat } = hop(c, 'Chi tiết phát sinh in lên phiếu', `
+      <p class="mo" style="margin-top:0">Ca nhập từ sổ chỉ có tổng phát sinh <b>${c.esc(tong.toLocaleString('vi-VN'))}đ</b>. Máy tách sẵn từ cột Ghi chú của sổ — anh/chị sửa cho khách đọc được, <b>mỗi dòng một món</b>. Để trống thì phiếu in "In ảnh, dịch vụ ngoài gói".</p>
+      <textarea id="ps-in" rows="7" style="width:100%">${c.esc(dong.join('\n'))}</textarea>
+      <div class="hang-nut" style="margin-top:10px;justify-content:flex-end"><button class="nut nho" id="ps-dung">Dựng phiếu</button></div>`);
+    let daXong = false;
+    const ra = (v) => { if (!daXong) { daXong = true; xong(v); } };
+    new MutationObserver((_, o) => { if (!g.isConnected) { o.disconnect(); ra(null); } }).observe(document.body, { childList: true });
+    g.querySelector('#ps-dung').onclick = () => {
+      const v = g.querySelector('#ps-in').value.split('\n').map((s) => s.trim()).filter(Boolean);
+      try { localStorage.setItem(khoa, JSON.stringify(v)); } catch { /* bỏ qua */ }
+      ra(v); tat();
+    };
+  });
+}
