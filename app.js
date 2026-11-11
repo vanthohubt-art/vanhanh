@@ -482,9 +482,10 @@ async function trangCa(id) {
 // #/lich/<ngày>/<ngay|tuan|thang>. Ngày: khung 2 giờ + cột "Chờ xếp lịch". Tuần: 7 cột. Tháng: lưới.
 async function trangLich(ngay = homNay(), cheDo = 'ngay') {
   const nutNhanh = [['Hôm nay', homNay(), 'ngay'], ['Hôm qua', congNgay(homNay(), -1), 'ngay'], ['Ngày mai', congNgay(homNay(), 1), 'ngay'],
-    ['7 ngày tới', homNay(), 'tuan'], ['Lịch tháng', ngay, 'thang']];
-  const buoc = cheDo === 'thang' ? null : cheDo === 'tuan' ? 7 : 1;
-  const nhanNgay = cheDo === 'thang' ? `Tháng ${ngay.slice(5, 7)}/${ngay.slice(0, 4)}` : cheDo === 'tuan' ? `${ngayVN(ngay)} → ${ngayVN(congNgay(ngay, 6))}` : `${THU_DAI[thuCua(ngay)]}, ${ngayVN(ngay)}/${ngay.slice(0, 4)}`;
+    ['7 ngày tới', homNay(), 'tuan'], ['Lịch tháng', ngay, 'thang'], ['Lịch ekip tuần', homNay(), 'ekip']];
+  if (cheDo === 'ekip') ngay = congNgay(ngay, -((thuCua(ngay) + 6) % 7));   // tuần bắt đầu Thứ Hai
+  const buoc = cheDo === 'thang' ? null : cheDo === 'tuan' || cheDo === 'ekip' ? 7 : 1;
+  const nhanNgay = cheDo === 'thang' ? `Tháng ${ngay.slice(5, 7)}/${ngay.slice(0, 4)}` : cheDo === 'tuan' || cheDo === 'ekip' ? `${ngayVN(ngay)} → ${ngayVN(congNgay(ngay, 6))}` : `${THU_DAI[thuCua(ngay)]}, ${ngayVN(ngay)}/${ngay.slice(0, 4)}`;
   const truoc = cheDo === 'thang' ? (() => { const d = new Date(ngay + 'T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 10); })() : congNgay(ngay, -buoc);
   const sau = cheDo === 'thang' ? (() => { const d = new Date(ngay + 'T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + 1); return d.toISOString().slice(0, 10); })() : congNgay(ngay, buoc);
   $('#trang').innerHTML = dauTrang('Điều phối', 'Lịch chụp & phân ekip', 'Xếp ca theo khung 2 giờ, cảnh báo trùng ekip, khách chờ xếp lịch ở cột phải.',
@@ -513,6 +514,7 @@ async function trangLich(ngay = homNay(), cheDo = 'ngay') {
     $('#lich-than').innerHTML = `<div class="the cuon-ngang"><div class="thang" style="min-width:640px">${['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((t) => `<div class="thu">${t}</div>`).join('')}${o.join('')}</div></div>`;
     return;
   }
+  if (cheDo === 'ekip') { await veLichEkip(ngay); return; }
   if (cheDo === 'tuan') {
     const ca = await kho.lich(ngay, congNgay(ngay, 6));
     $('#lich-than').innerHTML = `<div class="cuon-ngang"><div class="tuan">${[0, 1, 2, 3, 4, 5, 6].map((i) => {
@@ -548,6 +550,56 @@ async function trangLich(ngay = homNay(), cheDo = 'ngay') {
         <span><b>${esc(h.khach)}</b><br><span class="mo nho">${esc(h.sdt || 'chưa có SĐT')} · ${esc(h.goi)}</span></span>
         <a class="nut phu nho" href="#/ca/${h.id}">Xếp lịch</a></div>`).join('') || '<div class="trong">Không có hợp đồng nào chờ xếp lịch.</div>'}</div>
     </div></div>`;
+}
+
+// ═════════ LỊCH EKIP TUẦN (11/11/2026) ═════════
+// Hàng = người, cột = Thứ Hai → Chủ nhật. Chỉ vai đi theo NGÀY CHỤP (chụp · stylist · makeup · sale tại studio); PTS làm sau
+// buổi chụp nên không xếp vào ô ngày. Đỏ = trùng giờ (hai ca cách nhau dưới 2 tiếng có cùng người, như cờ ở lịch ngày);
+// vàng = một người từ QUA_TAI ca trở lên trong ngày. Dựng từ crm_lich sẵn có, bỏ HĐ đã huỷ.
+const QUA_TAI = 4;
+const VAI_NGAY = ['chup', 'stylist', 'makeup', 'sale_offline'];
+const VAI_TAT = { chup: 'C', stylist: 'S', makeup: 'M', sale_offline: 'B' };
+async function veLichEkip(dau) {
+  const ngays = [0, 1, 2, 3, 4, 5, 6].map((i) => congNgay(dau, i));
+  const ca = (await kho.lich(dau, ngays[6])).filter((c) => c.trang_thai !== 9);
+  const phut = (g) => (g ? Number(g.slice(0, 2)) * 60 + Number(g.slice(3, 5)) : null);
+  const nguoi = new Map();
+  for (const c of ca) for (const e of c.ekip) {
+    if (!VAI_NGAY.includes(e.vai)) continue;
+    if (!nguoi.has(e.id)) nguoi.set(e.id, { id: e.id, ten: e.ten, o: {} });
+    const p = nguoi.get(e.id), o = (p.o[c.ngay] ||= new Map());
+    if (!o.has(c.id)) o.set(c.id, { ca: c, vai: [] });
+    o.get(c.id).vai.push(e.vai);
+  }
+  const ds = [...nguoi.values()].sort((a, b) => a.ten.localeCompare(b.ten, 'vi'));
+  const trungGio = (ds1, x) => ds1.some((y) => y !== x && phut(x.ca.gio) != null && phut(y.ca.gio) != null && Math.abs(phut(x.ca.gio) - phut(y.ca.gio)) < 120);
+  let soTrung = 0, soQuaTai = 0;
+  const hang = ds.map((p) => {
+    const tong = Object.values(p.o).reduce((a, m) => a + m.size, 0);
+    return `<tr><th style="text-align:left;white-space:nowrap">${esc(p.ten)}<br><span class="mo nho">${tong} ca</span></th>${ngays.map((d) => {
+      const m = p.o[d]; if (!m) return '<td class="mo nho" style="text-align:center">—</td>';
+      const xs = [...m.values()].sort((a, b) => (a.ca.gio || '99').localeCompare(b.ca.gio || '99'));
+      const quaTai = xs.length >= QUA_TAI; if (quaTai) soQuaTai++;
+      return `<td style="vertical-align:top;${quaTai ? 'background:var(--vang-nhat)' : ''}">${xs.map((x) => {
+        const trung = trungGio(xs, x); if (trung) soTrung++;
+        return `<a href="#/ca/${x.ca.id}" class="nho" style="display:block;text-decoration:none;color:${trung ? 'var(--do)' : 'inherit'};margin-bottom:3px">
+          <b>${x.ca.gio || '--:--'}</b> ${esc((x.ca.khach || '').split(' ').slice(-2).join(' '))} <span class="mo">${x.vai.map((v) => VAI_TAT[v]).join('')}</span>${trung ? ' ⚠' : ''}</a>`;
+      }).join('')}</td>`;
+    }).join('')}</tr>`;
+  });
+  const thieu = ca.filter((c) => !c.ekip.some((e) => e.vai === 'chup'));
+  const soCa = ngays.map((d) => ca.filter((c) => c.ngay === d).length);
+  $('#lich-than').innerHTML = `
+    <div class="the" style="padding:10px 14px">
+      <span class="mo">${ca.length} ca trong tuần · ${ds.length} người có lịch</span>
+      ${soTrung ? ` · <b style="color:var(--do)">⚠ ${soTrung} ô trùng giờ</b>` : ''}${soQuaTai ? ` · <b style="color:#8A5A00">${soQuaTai} ngày-người từ ${QUA_TAI} ca</b>` : ''}
+      ${thieu.length ? ` · <b style="color:var(--do)">${thieu.length} ca chưa có thợ chụp</b>` : ''}
+      <div class="mo nho" style="margin-top:4px">C chụp · S stylist · M makeup · B bán thêm tại studio. PTS làm sau buổi chụp nên không xếp ở đây. Đỏ ⚠ = cùng người ở hai ca cách nhau dưới 2 tiếng · nền vàng = từ ${QUA_TAI} ca/ngày.</div>
+    </div>
+    <div class="the cuon-ngang" style="padding:8px"><table style="min-width:860px;width:100%">
+      <thead><tr><th></th>${ngays.map((d, i) => `<th style="text-align:left${d === homNay() ? ';color:var(--nhan)' : ''}"><a href="#/lich/${d}/ngay" style="color:inherit;text-decoration:none">${THU[thuCua(d)]} ${ngayVN(d)}</a><br><span class="mo nho">${soCa[i]} ca</span></th>`).join('')}</tr></thead>
+      <tbody>${hang.join('') || `<tr><td colspan="8" class="trong">Tuần này chưa có ca nào xếp ekip.</td></tr>`}</tbody></table></div>
+    ${thieu.length ? `<div class="the"><h2>Ca chưa có thợ chụp</h2>${thieu.map((c) => `<a class="gd" href="#/ca/${c.id}" style="text-decoration:none"><span>${THU[thuCua(c.ngay)]} ${ngayVN(c.ngay)} ${c.gio || ''} · ${esc(c.khach)}</span><span class="mo nho">${esc(c.goi)}</span></a>`).join('')}</div>` : ''}`;
 }
 
 // ═════════ HẬU KỲ ═════════
