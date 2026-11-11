@@ -884,15 +884,16 @@ export async function trangKpi(c, thangChon) {
   const thang = /^\d{4}-\d{2}$/.test(thangChon || '') ? thangChon : c.homNay().slice(0, 7);
   const r = await c.kho.ham('crm_kpi', { p_thang: thang + '-01', p_ai: c.toi });
   const doiThang = (n) => { const d = new Date(thang + '-01T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); return d.toISOString().slice(0, 7); };
+  const ssNhan = r.den_nay ? `cùng kỳ tháng trước (tới ngày ${Number(r.den_nay.slice(8))})` : 'tháng trước';
   const nhan = `tháng ${Number(thang.slice(5))}/${thang.slice(0, 4)}`;
   const tp = (x) => Number(x).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
   const pt = (a, b) => (Number(b) ? Math.round((100 * Number(a)) / Number(b)) + '%' : '—');
   const lech = (nay, truoc) => { const a = Number(nay), b = Number(truoc); if (!b) return ''; const d = a - b;
-    return ` <span class="mo nho" style="color:${d > 0 ? 'var(--xanh)' : d < 0 ? 'var(--do)' : 'inherit'}">${d > 0 ? '▲' : d < 0 ? '▼' : '='} ${Math.abs(d)} so với tháng trước</span>`; };
+    return ` <span class="mo nho" style="color:${d > 0 ? 'var(--xanh)' : d < 0 ? 'var(--do)' : 'inherit'}">${d > 0 ? '▲' : d < 0 ? '▼' : '='} ${Math.abs(d)} so với ${ssNhan}</span>`; };
   const dong = (ten, gt, phu = '') => `<tr><td>${ten}${phu ? `<br><span class="mo nho">${phu}</span>` : ''}</td><td class="so">${gt}</td></tr>`;
   const the = (x) => {
     const d = [];
-    d.push(dong('Ca tham gia', `<b>${x.so_ca}</b>`, Object.entries(x.theo_vai || {}).map(([v, n]) => `${TEN_VAI_KPI[v] || v} ${n}`).join(' · ') + lech(x.so_ca, x.so_ca_truoc)));
+    d.push(dong('Ca tham gia', `<b>${x.so_ca}</b>`, Object.entries(x.theo_vai || {}).map(([v, n]) => `${TEN_VAI_KPI[v] || v} ${n}`).join(' · ') + lech(x.so_ca_ss, x.so_ca_truoc)));
     if (x.sale) d.push(dong('Sale online · doanh số', c.tien(x.sale.doanh_so),
       `${x.sale.so_hd} HĐ · ${tp(x.sale.ti_le_co_ps)}% ca có phát sinh · phát sinh TB ${c.tien(x.sale.ps_tb)}/ca${Number(x.sale.giam_tb_pt) ? ` · giảm giá TB ${tp(x.sale.giam_tb_pt)}%` : ''}`));
     if (x.ban_them) d.push(dong('Bán thêm tại studio', c.tien(x.ban_them.phat_sinh_phan_minh),
@@ -918,7 +919,7 @@ export async function trangKpi(c, thangChon) {
     `${r.la_chu ? 'Mỗi người một thẻ' : 'Số của riêng bạn'} · ${nhan}, tính theo ngày chụp, bỏ hợp đồng đã huỷ. Gom từ dữ liệu đang có trong app — không ai phải nhập thêm.`,
     `<a class="nut phu nho" href="#/kpi/${doiThang(-1)}">‹ Tháng trước</a> <a class="nut phu nho" href="#/kpi/${doiThang(1)}">Tháng sau ›</a>`) + `
     ${o ? `<div class="so-lieu bon">
-      ${c.theSo('#/kpi/' + thang, 'lich', ['var(--tt8n)', 'var(--tt8c)'], 'Ca trong tháng', o.so_ca, `tháng trước ${o.so_ca_truoc}`)}
+      ${c.theSo('#/kpi/' + thang, 'lich', ['var(--tt8n)', 'var(--tt8c)'], 'Ca trong tháng', o.so_ca, r.den_nay ? `tới hôm nay ${o.so_ca_ss} · cùng kỳ tháng trước ${o.so_ca_truoc}` : `tháng trước ${o.so_ca_truoc}`)}
       ${c.theSo('#/kpi/' + thang, 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Doanh thu ca', c.trieu(o.doanh_thu), `phát sinh ${pt(o.phat_sinh, o.tien_goi)} tiền gói`)}
       ${c.theSo('#/chat-luong', 'sao', ['var(--vang-nhat)', '#8A5A00'], 'Khách chấm TB', o.diem_tb != null ? tp(o.diem_tb) + ' ★' : '—', `${o.so_danh_gia} đánh giá`)}
       ${c.theSo('#/hoa-hong/' + thang, 'canh', ['var(--do-nhat)', 'var(--do)'], 'Ca thiếu người', Number(o.ca_thieu_sale) + Number(o.ca_thieu_tho), `${o.ca_thieu_sale} thiếu sale · ${o.ca_thieu_tho} thiếu thợ chụp — KPI sẽ sót`)}

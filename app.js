@@ -5,7 +5,7 @@
 import * as kho from './kho.js?v=20261111g';
 import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261111e';
 import { psTuSo, ghiChuSo } from './goi-gom.js?v=20261111e';
-import * as mr from './mo-rong.js?v=20261111g';
+import * as mr from './mo-rong.js?v=20261111h';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
