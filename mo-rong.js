@@ -116,25 +116,28 @@ export async function trangLead(c, loc = '') {
   const r = await c.kho.ham('crm_ds_lead', { p_trang_thai: loc || null, p_tim: null });
   const dem = r.dem || {};
   const dangMo = ['moi', 'dang_tu_van', 'da_bao_gia', 'hen_den'].reduce((s, k) => s + n(dem[k]), 0);
-  c.trang.innerHTML = c.dauTrang('Bán hàng', 'Khách tiềm năng', 'Khách hỏi chưa chốt. Mỗi khách có ngày hẹn liên hệ lại — quá hẹn thì lên đầu. Chốt xong bấm "Lên hợp đồng".',
+  const nguoi = n(r.nguoi);
+  c.trang.innerHTML = c.dauTrang('Bán hàng', 'Khách tiềm năng', 'Khách hỏi chưa chốt. Máy đọc hội thoại Pancake mỗi 30 phút: khách nhắn mà chưa ai trả lời thì lên đầu; sale trả lời rồi khách im thì hẹn nhắn lại sau 2 ngày; im quá 30 ngày thì xếp "Nguội". Sale tự đổi ngày hẹn thì máy không đè. Chốt xong bấm "Lên hợp đồng".',
     `<button class="nut" id="lead-moi">+ Thêm khách</button>`) + `
     <div class="so-lieu">
-      ${c.theSo('#/lead', 'ca', ['var(--nhan-nhat)', 'var(--nhan-dam)'], 'Khách mới hôm nay', r.hom_nay, 'nhập tay từ Pancake/Zalo')}
-      ${c.theSo('#/lead', 'canh', ['var(--do-nhat)', 'var(--do)'], 'Quá hẹn liên hệ', r.qua_hen, r.qua_hen ? 'nhắn lại ngay' : 'không ai bị bỏ quên')}
-      ${c.theSo('#/lead', 'tim', ['var(--tt4n)', 'var(--tt4c)'], 'Đang theo', dangMo, 'chưa chốt, chưa mất')}
+      ${c.theSo('#/lead/cho_tra_loi', 'canh', ['var(--do-nhat)', 'var(--do)'], 'Khách chờ trả lời', n(r.cho_tra_loi), n(r.cho_tra_loi) ? 'khách nhắn sau tin cuối của sale' : 'không ai đang chờ')}
+      ${c.theSo('#/lead/qua_hen', 'lich', ['var(--vang-nhat)', '#8A5A00'], 'Quá hẹn nhắn lại', r.qua_hen, r.qua_hen ? 'khách im, tới lúc nhắn lại' : 'không ai bị bỏ quên')}
+      ${c.theSo('#/lead', 'tim', ['var(--tt4n)', 'var(--tt4c)'], 'Đang theo', dangMo - nguoi, `chưa chốt · ${nguoi} nguội (im >30 ngày)`)}
       ${c.theSo('#/lead/da_chot', 'hd', ['var(--xanh-nhat)', 'var(--xanh)'], 'Đã chốt', n(dem.da_chot), n(dem.mat) + ' mất')}
       ${r.qc_30 ? c.theSo('#/lead', 'nha', ['var(--tt8n)', 'var(--tt8c)'], 'Từ quảng cáo (30 ngày)', `${r.qc_30.so}/${r.qc_30.tong}`,
         r.qc_30.so ? `chốt ${r.qc_30.chot} · ${Math.round((100 * r.qc_30.chot) / r.qc_30.so)}% · tổng chốt ${r.qc_30.tong_chot}` : 'chưa có khách từ quảng cáo')
         : c.theSo('#/lead', 'nha', ['var(--tt8n)', 'var(--tt8c)'], 'Nguồn 30 ngày', Object.values(r.theo_kenh || {}).reduce((s, x) => s + n(x), 0), Object.entries(r.theo_kenh || {}).map(([k, v]) => `${KENH[k] || k} ${v}`).join(' · ') || 'chưa có')}
     </div>
-    <div class="the" style="padding:12px 14px"><a class="chip ${!loc ? 'chon' : ''}" href="#/lead">Tất cả</a>${Object.entries(TT_LEAD).map(([k, [t]]) => `<a class="chip ${loc === k ? 'chon' : ''}" href="#/lead/${k}">${t} <span class="so">${n(dem[k])}</span></a>`).join('')}</div>
+    <div class="the" style="padding:12px 14px"><a class="chip ${!loc ? 'chon' : ''}" href="#/lead">Tất cả</a>${[['cho_tra_loi', 'Chờ trả lời', r.cho_tra_loi], ['qua_hen', 'Quá hẹn', r.qua_hen], ['nguoi', 'Nguội', r.nguoi]].map(([k, t, so]) => `<a class="chip ${loc === k ? 'chon' : ''}" href="#/lead/${k}">${t} <span class="so">${n(so)}</span></a>`).join('')}${Object.entries(TT_LEAD).map(([k, [t]]) => `<a class="chip ${loc === k ? 'chon' : ''}" href="#/lead/${k}">${t} <span class="so">${n(dem[k])}</span></a>`).join('')}</div>
     <div class="luoi-ca">${r.ds.map((l) => `<div class="the-ca" style="border-left-color:var(--${TT_LEAD[l.trang_thai][1]}c)">
       <div class="hang"><span class="nhan ${TT_LEAD[l.trang_thai][1]}">${TT_LEAD[l.trang_thai][0]}</span>${l.nguon_qc ? '<span class="nhan cam" title="Khách bấm vào quảng cáo rồi nhắn">Quảng cáo</span>' : ''}
         <span class="mo nho" style="margin-left:auto">${l.tu_pancake ? 'Pancake' : KENH[l.kenh] || l.kenh} · ${l.tao}</span></div>
       <div class="hang"><span class="ten">${c.esc(l.ten)}</span>${l.hang_muc_ten ? `<span class="nhan" style="margin-left:auto">${c.esc(l.hang_muc_ten)}</span>` : ''}</div>
       ${l.nhu_cau ? `<div class="phu">"${c.esc(l.nhu_cau)}"</div>` : ''}
-      ${l.tu_pancake ? `<div class="phu">${l.so_tin_khach || 0} tin khách nhắn${l.tin_cuoi_vn ? ' · tin cuối ' + l.tin_cuoi_vn : ''}${(l.nhan_pancake || []).length ? ' · nhãn: ' + l.nhan_pancake.map(c.esc).join(', ') : ''}</div>` : ''}
-      <div class="phu">${l.du_kien_chup ? 'dự kiến chụp ' + c.ngayVN(l.du_kien_chup) + ' · ' : ''}${l.hen_lien_he ? `<b style="color:${l.hen_lien_he <= c.homNay() && !['da_chot', 'mat'].includes(l.trang_thai) ? 'var(--do)' : 'inherit'}">hẹn nhắn lại ${c.ngayVN(l.hen_lien_he)}</b>` : ''}${l.sale ? ' · ' + c.esc(l.sale) : ''}</div>
+      ${l.tu_pancake ? `<div class="phu">${l.so_tin_khach || 0} tin khách nhắn${l.tin_khach_vn ? ' · khách nhắn cuối ' + l.tin_khach_vn + (l.tin_sale_vn ? ' · sale nhắn cuối ' + l.tin_sale_vn : ' · sale chưa trả lời') : l.tin_cuoi_vn ? ' · tin cuối ' + l.tin_cuoi_vn : ''}${(l.nhan_pancake || []).length ? ' · nhãn: ' + l.nhan_pancake.map(c.esc).join(', ') : ''}</div>` : ''}
+      <div class="phu">${l.du_kien_chup ? 'dự kiến chụp ' + c.ngayVN(l.du_kien_chup) + ' · ' : ''}${l.cho_tra_loi ? '<b style="color:var(--do)">khách đang chờ trả lời</b>'
+        : l.nguoi ? '<span class="mo">nguội — khách im hơn 30 ngày</span>'
+        : l.hen_lien_he ? `<b style="color:${l.qua_hen || (l.hen_lien_he <= c.homNay() && !['da_chot', 'mat'].includes(l.trang_thai)) ? 'var(--do)' : 'inherit'}">hẹn nhắn lại ${c.ngayVN(l.hen_lien_he)}</b>${l.hen_tay ? ' <span class="mo nho">(sale đặt)</span>' : ''}` : ''}${l.sale ? ' · ' + c.esc(l.sale) : ''}</div>
       ${l.ly_do_mat ? `<div class="phu" style="color:var(--do)">Mất vì: ${c.esc(l.ly_do_mat)}</div>` : ''}
       <div class="hang-nut">${c.sdtHtml(l.sdt)}<button class="nut phu nho" data-sua="${l.id}">Sửa</button>
         ${l.hop_dong_id ? `<a class="nut phu nho" href="#/ca/${l.hop_dong_id}">${l.hop_dong_ma}</a>` : c.coTien() && l.trang_thai !== 'mat' ? `<button class="nut nho" data-hd="${l.id}">Lên hợp đồng</button>` : ''}</div>
