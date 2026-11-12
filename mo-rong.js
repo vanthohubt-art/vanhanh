@@ -11,7 +11,9 @@ const TT_LEAD = { moi: ['Mới', 'tt1'], dang_tu_van: ['Đang tư vấn', 'tt3']
 const KHOAN = { mat_bang: 'Mặt bằng', dien_nuoc: 'Điện nước', luong: 'Lương', quang_cao: 'Quảng cáo', in_an: 'In ấn', dao_cu_trang_phuc: 'Đạo cụ · trang phục', thiet_bi: 'Thiết bị', van_phong_pham: 'Văn phòng phẩm', an_uong: 'Ăn uống', van_chuyen: 'Vận chuyển', sua_chua: 'Sửa chữa', khac: 'Khác' };
 const VAN_DE = { chup_lau: 'Chụp lâu', anh_xau: 'Ảnh chưa đẹp', tra_tre: 'Trả ảnh trễ', thai_do: 'Thái độ', gia: 'Giá cao', phat_sinh: 'Phát sinh bất ngờ', khac: 'Khác' };
 const CSKH = { nhac_chon_anh: ['Nhắc khách chọn ảnh', 'Đã gửi ảnh gốc mà khách chưa chọn'], xin_danh_gia: ['Xin đánh giá sau chụp', 'Trả ảnh 2–14 ngày, chưa có đánh giá'],
-  sinh_nhat: ['Sinh nhật bé sắp tới', 'Mời chụp sinh nhật — trong 30 ngày tới'], ky_niem: ['Tròn 1 năm từ lần chụp', 'Mời chụp kỷ niệm — chưa đặt ca mới'] };
+  sinh_nhat: ['Sinh nhật bé sắp tới', 'Mời chụp sinh nhật — trong 30 ngày tới'],
+  sap_sinh: ['Mẹ bầu sắp sinh', 'Chụp bầu 30–75 ngày trước, chưa đặt Newborn — mời chụp khi bé chào đời'],
+  ky_niem: ['Khách cũ sắp tròn năm', 'Newborn: ngày 290–310 (bé sắp 1 tuổi) · ca khác: ngày 335–355 — nhắc TRƯỚC mốc khách hay quay lại'] };
 // Loại CSKH ghi từ màn khác (không thành cột việc ở màn Chăm sóc khách) — chỉ để gọi tên trong nhật ký.
 const TEN_CSKH_KHAC = { bao_tra_anh: ['Nhắc lấy ảnh in'], hoi_tham: ['Hỏi thăm'], khac: ['Khác'] };
 const TT_BAI = { nhap: ['Nháp', 'tt1'], cho_duyet: ['Chờ anh Thọ duyệt', 'tt3'], da_duyet: ['Đã duyệt — chờ đăng', 'tt4'], da_dang: ['Đã đăng', 'tt2'], huy: ['Huỷ', 'tt5'] };
@@ -324,7 +326,7 @@ export function moVideo(c, v, xong) {
 // ═════════ CHĂM SÓC KHÁCH ═════════
 export async function trangCskh(c) {
   const r = await c.kho.ham('crm_cskh', {});
-  c.trang.innerHTML = c.dauTrang('Sau chụp', 'Chăm sóc khách', 'Máy tự sinh việc từ ca thật: nhắc chọn ảnh, xin đánh giá, sinh nhật bé, tròn 1 năm. Gọi/nhắn xong bấm "Đã liên hệ" để ghi kết quả — việc tự ẩn.') + `
+  c.trang.innerHTML = c.dauTrang('Sau chụp', 'Chăm sóc khách', 'Máy tự sinh việc từ ca thật: nhắc chọn ảnh, xin đánh giá, sinh nhật bé, mẹ bầu sắp sinh, khách cũ sắp tròn năm (đo sổ 2023–2026: chỉ 6% khách quay lại, phần lớn quanh mốc 1 năm). Gọi/nhắn xong bấm "Đã liên hệ" để ghi kết quả — việc tự ẩn.') + `
     <div class="hai-cot deu">${Object.entries(CSKH).map(([k, [ten, mo]]) => {
       const ds = r.viec.filter((v) => v.loai === k);
       return `<div class="bo-phan"><div class="dau-bp"><div><b>${ten}</b><div class="mo nho">${mo}</div></div><span class="tong-bp">${ds.length}</span></div>
