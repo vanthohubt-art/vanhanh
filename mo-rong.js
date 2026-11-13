@@ -784,7 +784,7 @@ export async function veHoSoThem(c, h, chua) {
 // ═════════ LƯƠNG & HOA HỒNG (011, 09/11/2026) ═════════
 // Chỉ phần HOA HỒNG tự tính từ ekip của ca. Lương cứng · chấm công · thưởng · tăng ca vẫn ở app lương.
 // Chủ xem mọi người; nhân viên chỉ thấy dòng của mình (máy chủ lọc, không phải ẩn).
-const TEN_VAI = { sale_online: 'Sale online · giá gói', sale_offline: 'Sale tại studio · phát sinh', chup: 'Chụp · tổng hoá đơn', pts: 'PTS · tổng hoá đơn', stylist: 'Stylist · tổng hoá đơn', gioi_thieu: 'Giới thiệu khách · tổng hoá đơn' };
+const TEN_VAI = { sale_online: 'Sale online · giá gói', sale_offline: 'Sale tại studio · phát sinh', chup: 'Chụp · tổng hoá đơn', pts: 'PTS · tổng hoá đơn', stylist: 'Stylist · tổng hoá đơn', gioi_thieu: 'Giới thiệu khách · giá gói' };
 export async function trangHoaHong(c, chu) {
   const hn = c.homNay(), k = kh.docKhoang(chu, hn), nhan = kh.nhanKhoang(k, hn), thang = k.chu, motThang = k.kieu === 'thang';
   const r = await c.kho.ham('crm_hoa_hong_khoang', { p_tu: k.tu, p_den: k.den, p_ai: c.toi });
