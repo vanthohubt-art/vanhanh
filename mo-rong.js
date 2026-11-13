@@ -986,3 +986,93 @@ export async function trangBanThem(c, loc = '') {
     });
   }));
 }
+
+// ═════════ LÃI LỖ THÁNG (038, 14/11/2026) — chỉ chủ ═════════
+// Doanh thu theo ngày chụp − (hoa hồng tự tính + lương cứng + quảng cáo số Meta + khoản định kỳ / phiếu chi thật).
+// Mỗi dòng có nhãn nguồn: "tự động" · "phiếu chi" · "ước tính" — số ước tính KHÔNG được trông như số thật.
+const NGUON_LL = { tu_dong: ['xanh', 'tự động'], phieu_chi: ['cam', 'phiếu chi'], dinh_ky: ['vang', 'ước tính / định kỳ'] };
+export async function trangLaiLo(c, thangChon) {
+  if (!c.laChu()) { c.trang.innerHTML = c.dauTrang('Thu chi', 'Lãi lỗ tháng', 'Màn này chỉ anh Thọ xem.'); return; }
+  const thang = /^\d{4}-\d{2}$/.test(thangChon || '') ? thangChon : c.homNay().slice(0, 7);
+  const r = await c.kho.ham('crm_lai_lo', { p_thang: thang + '-01', p_so_thang: 6, p_ai: c.toi });
+  const m = r.thang[0];
+  const doiThang = (k) => { const d = new Date(thang + '-01T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + k); return d.toISOString().slice(0, 7); };
+  const tenThang = (t) => `T${Number(t.slice(5))}/${t.slice(0, 4)}`;
+  const mauLai = (v) => (n(v) < 0 ? 'var(--do)' : 'var(--xanh)');
+  const ptLai = (x) => (x.bien_lai == null ? '—' : Number(x.bien_lai).toLocaleString('vi-VN') + '%');
+  const nhanNguon = (k) => { const [mau, chu] = NGUON_LL[k] || ['', k]; return `<span class="nhan ${mau}" style="font-size:11px">${chu}</span>`; };
+  // Gom theo khoản mục: lương → quảng cáo → in ấn → mặt bằng → điện nước → còn lại
+  const thuTu = ['luong', 'quang_cao', 'in_an', 'mat_bang', 'dien_nuoc'];
+  const nhom = [...new Set(m.dong.map((x) => x.khoan))].sort((a, b) => (thuTu.indexOf(a) + 1 || 99) - (thuTu.indexOf(b) + 1 || 99));
+  const bangThang = nhom.map((k) => {
+    const ds = m.dong.filter((x) => x.khoan === k), tong = ds.reduce((a, x) => a + n(x.tien), 0);
+    return `<tr><th colspan="2" style="padding-top:14px">${KHOAN[k] || k}</th><th class="so" style="padding-top:14px">${c.tien(tong)}</th></tr>`
+      + ds.map((x) => `<tr><td style="padding-left:18px">${c.esc(x.ten)}</td><td>${nhanNguon(x.nguon)}</td><td class="so">${c.tien(x.tien)}</td></tr>`).join('');
+  }).join('');
+  const dk = r.dinh_ky.filter((x) => !x.den_thang || x.den_thang >= thang);
+  const dkCu = r.dinh_ky.filter((x) => x.den_thang && x.den_thang < thang);
+  const giaTri = (x) => (x.ti_le != null ? (Number(x.ti_le) * 100).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + '% doanh thu' : c.tien(x.so_tien) + '/tháng');
+  c.trang.innerHTML = c.dauTrang('Thu chi', 'Lãi lỗ tháng',
+    `${tenThang(m.thang)} · doanh thu tính theo ngày chụp (như KPI và hoa hồng). Hoa hồng, quảng cáo máy tự lấy; lương cứng và khoản cố định anh khai một lần ở cuối trang.`,
+    `<a class="nut phu nho" href="#/lai-lo/${doiThang(-1)}">‹ Tháng trước</a> <a class="nut phu nho" href="#/lai-lo/${doiThang(1)}">Tháng sau ›</a>`) + `
+    ${m.dang_chay ? `<div class="canh">⚠ Tháng đang chạy: doanh thu mới tính tới hôm nay, còn khoản cố định (mặt bằng, lương cứng…) đã tính đủ cả tháng ⇒ lãi sẽ thấp hơn lúc cuối tháng.</div>` : ''}
+    ${m.canh_bao.map((s) => `<div class="canh">⚠ ${c.esc(s)}</div>`).join('')}
+    <div class="so-lieu bon">
+      ${c.theSo('#/kpi/' + m.thang, 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Doanh thu', c.trieu(m.doanh_thu), `${m.so_ca} ca${n(m.doanh_thu_khong_ngay) ? ` · đơn không ngày ${c.trieu(m.doanh_thu_khong_ngay)}` : ''}${n(m.ca_chua_tien) ? ` · ${m.ca_chua_tien} ca chưa có tiền` : ''}`)}
+      ${c.theSo('#/chi/' + m.thang, 'vi', ['var(--do-nhat)', 'var(--do)'], 'Tổng chi', c.trieu(m.tong_chi), n(m.uoc_tinh) ? `trong đó ước tính ${c.trieu(m.uoc_tinh)}` : 'toàn số thật')}
+      ${c.theSo('#/lai-lo/' + m.thang, 'hd', n(m.lai) < 0 ? ['var(--do-nhat)', 'var(--do)'] : ['var(--tt8n)', 'var(--tt8c)'], n(m.lai) < 0 ? 'Lỗ' : 'Lãi', c.trieu(m.lai), 'biên lãi ' + ptLai(m))}
+      ${c.theSo('#/cong-no/' + m.thang, 'tien', ['var(--vang-nhat)', '#8A5A00'], 'Tiền về trong tháng', c.trieu(m.thuc_thu), 'phiếu thu theo ngày tiền về')}
+    </div>
+    <div class="hai-cot">
+      <div class="the"><h2>Chi tiết ${tenThang(m.thang)}</h2>
+        <table><tr><th colspan="2">Doanh thu</th><th class="so" style="color:var(--xanh)">${c.tien(m.doanh_thu)}</th></tr>
+        ${bangThang || '<tr><td colspan="3" class="mo">Chưa có khoản chi nào.</td></tr>'}
+        <tr><th colspan="2" style="padding-top:14px">Tổng chi</th><th class="so" style="padding-top:14px">${c.tien(m.tong_chi)}</th></tr>
+        <tr><th colspan="2">${n(m.lai) < 0 ? 'Lỗ' : 'Lãi'}</th><th class="so" style="color:${mauLai(m.lai)}">${c.tien(m.lai)}</th></tr></table>
+        <div class="mo nho" style="margin-top:8px">Khoản nào trong tháng đã có phiếu chi thì phiếu chi thay hẳn số ước tính. Quảng cáo lấy số chi tiêu từ Meta (chưa gồm thuế Meta tính thêm nếu có), cập nhật lần cuối ${r.qc_cap_nhat || 'chưa có'}.</div></div>
+      <div class="the"><h2>6 tháng gần nhất</h2>
+        <table><tr><th>Tháng</th><th class="so">Doanh thu</th><th class="so">Chi</th><th class="so">Lãi</th><th class="so">Biên</th></tr>
+        ${r.thang.map((x) => `<tr style="${x.thang === m.thang ? 'background:var(--nhan-nhat)' : ''}"><td><a href="#/lai-lo/${x.thang}">${tenThang(x.thang)}</a>${x.dang_chay ? ' <span class="mo nho">đang chạy</span>' : ''}${x.canh_bao.length ? ` <span title="${c.esc(x.canh_bao.join(' · '))}">⚠</span>` : ''}</td>
+          <td class="so">${c.trieu(x.doanh_thu)}</td><td class="so">${c.trieu(x.tong_chi)}</td><td class="so" style="color:${mauLai(x.lai)}"><b>${c.trieu(x.lai)}</b></td><td class="so">${ptLai(x)}</td></tr>`).join('')}</table>
+        <div class="mo nho" style="margin-top:8px">⚠ = tháng đó còn thiếu số — bấm vào tháng để xem.</div></div>
+    </div>
+    <div class="the"><h2>Khoản chi định kỳ</h2>
+      <div class="mo nho" style="margin-bottom:8px">Khai một lần, máy tự tính mỗi tháng. Đổi số từ một tháng nào đó thì các tháng trước giữ nguyên số cũ. Lương cứng mỗi người một dòng, khoản mục Lương.</div>
+      <table><tr><th>Khoản</th><th>Nội dung</th><th class="so">Mỗi tháng</th><th>Áp từ</th><th></th></tr>
+      ${dk.map((x) => `<tr><td>${KHOAN[x.khoan_muc]}</td><td>${c.esc(x.mo_ta)}${x.ghi_chu ? `<br><span class="mo nho">${c.esc(x.ghi_chu)}</span>` : ''}</td><td class="so">${giaTri(x)}</td>
+        <td>${tenThang(x.tu_thang)}${x.den_thang ? ' → ' + tenThang(x.den_thang) : ''}</td>
+        <td style="white-space:nowrap"><a href="#" class="mo nho" data-sua-dk="${x.id}">sửa</a> · <a href="#" class="mo nho" data-ngung-dk="${x.id}">ngừng</a></td></tr>`).join('') || '<tr><td colspan="5" class="mo">Chưa có khoản nào.</td></tr>'}</table>
+      ${dkCu.length ? `<details style="margin-top:8px"><summary class="mo nho">${dkCu.length} khoản đã dừng trước ${tenThang(thang)}</summary><table>${dkCu.map((x) => `<tr><td>${KHOAN[x.khoan_muc]}</td><td>${c.esc(x.mo_ta)}</td><td class="so">${giaTri(x)}</td><td>${tenThang(x.tu_thang)} → ${tenThang(x.den_thang)}</td></tr>`).join('')}</table></details>` : ''}
+      <h2 style="margin-top:16px" id="dk-tieu-de">Thêm khoản định kỳ</h2>
+      <div class="hai"><label>Khoản mục<select id="dk-km">${Object.entries(KHOAN).map(([k, t]) => `<option value="${k}">${t}</option>`).join('')}</select></label>
+        <label>Nội dung *<input id="dk-mo" placeholder="Lương cứng Trang · Tiền nhà · Internet…"></label>
+        <label>Số tiền mỗi tháng<input id="dk-tien" type="text" inputmode="numeric" placeholder="vd 6000000"></label>
+        <label>hoặc % doanh thu<input id="dk-tl" type="text" inputmode="decimal" placeholder="vd 14,8"></label>
+        <label>Áp từ tháng<input id="dk-tu" type="month" value="${thang}"></label>
+        <label>Ghi chú<input id="dk-gc"></label></div>
+      <div class="hang-nut" style="margin-top:10px"><button class="nut nho" id="dk-luu">Lưu khoản</button> <button class="nut phu nho" id="dk-huy" hidden>Huỷ sửa</button></div>
+    </div>`;
+  let dangSua = null;
+  const so = (s) => String(s || '').replace(/[.\s]/g, '').replace(',', '.');
+  c.$('#dk-luu').onclick = () => c.chay(async () => {
+    await c.kho.ham('crm_luu_chi_dinh_ky', { d: { id: dangSua, khoan_muc: c.$('#dk-km').value, mo_ta: c.$('#dk-mo').value, so_tien: so(c.$('#dk-tien').value),
+      ti_le: so(c.$('#dk-tl').value), tu_thang: c.$('#dk-tu').value + '-01', ghi_chu: c.$('#dk-gc').value }, p_ai: c.toi });
+    c.bao('Đã lưu'); trangLaiLo(c, thang);
+  });
+  c.$('#dk-huy').onclick = () => trangLaiLo(c, thang);
+  document.querySelectorAll('[data-sua-dk]').forEach((a) => (a.onclick = (e) => {
+    e.preventDefault();
+    const x = r.dinh_ky.find((y) => String(y.id) === a.dataset.suaDk); dangSua = x.id;
+    c.$('#dk-tieu-de').textContent = 'Sửa: ' + x.mo_ta;
+    c.$('#dk-km').value = x.khoan_muc; c.$('#dk-mo').value = x.mo_ta; c.$('#dk-gc').value = x.ghi_chu || '';
+    c.$('#dk-tien').value = x.so_tien ?? ''; c.$('#dk-tl').value = x.ti_le != null ? String(Number(x.ti_le) * 100).replace('.', ',') : '';
+    c.$('#dk-tu').value = thang > x.tu_thang ? thang : x.tu_thang;   // mặc định: số mới áp từ tháng đang xem
+    c.$('#dk-huy').hidden = false; c.$('#dk-mo').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }));
+  document.querySelectorAll('[data-ngung-dk]').forEach((a) => (a.onclick = (e) => {
+    e.preventDefault();
+    const x = r.dinh_ky.find((y) => String(y.id) === a.dataset.ngungDk);
+    if (!confirm(`Ngừng tính "${x.mo_ta}" từ ${tenThang(thang)}? Các tháng trước giữ nguyên.`)) return;
+    c.chay(async () => { await c.kho.ham('crm_ngung_chi_dinh_ky', { p_id: x.id, p_tu_thang: thang + '-01', p_ai: c.toi }); c.bao('Đã ngừng'); trangLaiLo(c, thang); });
+  }));
+}
