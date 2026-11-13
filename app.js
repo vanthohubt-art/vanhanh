@@ -2,10 +2,10 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261113b';
+import * as kho from './kho.js?v=20261113c';
 import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261111e';
 import { psTuSo, ghiChuSo } from './goi-gom.js?v=20261111e';
-import * as mr from './mo-rong.js?v=20261113b';
+import * as mr from './mo-rong.js?v=20261113c';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
@@ -263,6 +263,7 @@ async function trangMoi(ngayGoiY = '') {
         <div class="the"><h2>Đặt cọc</h2>
           <div class="hai"><label>Số tiền cọc<input id="coc" type="number" min="0" step="1000" value="0"></label>
             <label>Hình thức<select id="htcoc"><option value="chuyen_khoan">Chuyển khoản</option><option value="tien_mat">Tiền mặt</option></select></label></div>
+          <label style="margin-top:10px">Ngày khách chuyển cọc<input id="ngaycoc" type="date" value="${homNay()}" max="${homNay()}"></label>
           <label style="margin-top:10px">Ghi chú cho ekip<textarea id="ghi" rows="3" placeholder="Bé hay ngủ trưa lúc mấy giờ, đi mấy người, khách lo lắng điều gì…"></textarea></label>
         </div>
         <div class="hang-nut"><button class="nut" id="luu">Lưu hợp đồng</button><a class="nut phu" href="#/" onclick="sessionStorage.removeItem('lead')">Huỷ</a></div>
@@ -311,7 +312,7 @@ async function trangMoi(ngayGoiY = '') {
         sdt: $('#sdt').value, ten: $('#ten').value, nguon: $('#nguon').value, nguon_bang_chung: $('#nguon-bc').value.trim(),
         goi_ma: $('#goi').value, gia_goi: $('#gia').value, giam_gia: $('#giam').value, ngay_chup: $('#ngay').value, gio_chup: $('#gio').value,
         sale_online_id: $('#sale').value ? Number($('#sale').value) : null, ekip: docEkip($('#ekip')),
-        coc: $('#coc').value, hinh_thuc_coc: $('#htcoc').value, ghi_chu: $('#ghi').value.trim(),
+        coc: $('#coc').value, hinh_thuc_coc: $('#htcoc').value, ngay_coc: $('#ngaycoc').value, ghi_chu: $('#ghi').value.trim(),
       }, toi);
       if (lead) {   // gắn hợp đồng vào khách tiềm năng ⇒ đo được tỉ lệ chốt
         await kho.ham('crm_luu_lead', { d: { ...lead, sdt: lead.sdt || '', trang_thai: 'da_chot', hop_dong_id: h.id }, p_ai: toi });
@@ -388,6 +389,7 @@ async function trangCa(id) {
             <label>Số tiền (âm = hoàn khách)<input id="pt-tien" type="number" step="1000" value="${h.tien.con_lai || ''}"></label>
             <label>Hình thức<select id="pt-ht"><option value="chuyen_khoan">Chuyển khoản</option><option value="tien_mat">Tiền mặt</option></select></label>
           </div>
+          <label style="margin-top:10px">Ngày tiền về<input id="pt-ngay" type="date" value="${homNay()}" max="${homNay()}"></label>
           <label style="margin-top:10px">Ghi chú<input id="pt-ghi" placeholder="Thu nốt sau buổi chụp…"></label>
           <div class="hang-nut" style="margin-top:10px"><button class="nut phu nho" id="pt-qr" title="Ảnh mã QR đúng số tiền ô trên, gửi khách chuyển khoản">Mã QR số tiền này</button><button class="nut nho" id="pt-thu">Ghi phiếu thu</button></div>
           <p class="mo" style="margin:8px 0 0">Xin cọc: gõ số tiền cọc → <b>Mã QR số tiền này</b> → gửi khách. Khách quét là tự điền số tiền + mã HĐ. Tiền về thì bấm Ghi phiếu thu.</p>
@@ -470,7 +472,7 @@ async function trangCa(id) {
       await kho.xoaPhatSinh(id, Number(a.dataset.xoa), toi); trangCa(id);
     }); }));
     $('#pt-thu').onclick = () => chay(async () => {
-      await kho.themPhieuThu(id, { so_tien: $('#pt-tien').value, hinh_thuc: $('#pt-ht').value, ghi_chu: $('#pt-ghi').value.trim() }, toi);
+      await kho.themPhieuThu(id, { so_tien: $('#pt-tien').value, hinh_thuc: $('#pt-ht').value, ngay: $('#pt-ngay').value, ghi_chu: $('#pt-ghi').value.trim() }, toi);
       bao('Đã ghi phiếu thu'); trangCa(id); lamMoiDaiGap();
     });
     batChip($('#ekip'));
