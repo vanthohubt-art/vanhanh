@@ -2,10 +2,10 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261114a';
+import * as kho from './kho.js?v=20261114b';
 import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261111e';
 import { psTuSo, ghiChuSo } from './goi-gom.js?v=20261111e';
-import * as mr from './mo-rong.js?v=20261114a';
+import * as mr from './mo-rong.js?v=20261114b';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
@@ -18,7 +18,7 @@ const ngayVN = (d) => (d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '—');
 const THU = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const THU_DAI = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 const thuCua = (d) => new Date(d + 'T12:00:00Z').getUTCDay();
-const VAI = { chup: 'Chụp', pts: 'PTS', stylist: 'Stylist', makeup: 'Makeup', sale_offline: 'Sale tại studio' };
+const VAI = { chup: 'Chụp', pts: 'PTS', stylist: 'Stylist', makeup: 'Makeup', sale_offline: 'Sale tại studio', gioi_thieu: 'Giới thiệu khách' };
 const NGUON = { quang_cao: 'Quảng cáo', gioi_thieu: 'Người quen giới thiệu', khach_cu: 'Khách cũ', tu_tim: 'Tự tìm (Google, fanpage)', chua_ro: 'Chưa rõ' };
 const KHUNG = [['08:00', '10:00'], ['10:00', '12:00'], ['12:00', '14:00'], ['14:00', '16:00'], ['16:00', '18:00'], ['18:00', '21:00']];
 let DM, toi = '', vaiToi = [], tcNho = null;
@@ -219,7 +219,9 @@ function chonGoiHtml(chon) {
 }
 function ekipHtml(chon = []) {
   return Object.entries(VAI).map(([vai, nhan]) => {
-    const ns = DM.nhanSu.filter((n) => (n.vai || []).includes(vai) || (vai === 'chup' && n.vai.includes('chu')));
+    // Giới thiệu khách (039): mọi nhân viên trừ Trang (anh Thọ 14/11) — không theo vai.
+    const ns = vai === 'gioi_thieu' ? DM.nhanSu.filter((n) => n.ma !== 'TRANG' && !(n.vai || []).includes('may') && !(n.vai || []).includes('chu'))
+      : DM.nhanSu.filter((n) => (n.vai || []).includes(vai) || (vai === 'chup' && n.vai.includes('chu')));
     if (!ns.length) return '';
     return `<div style="margin-bottom:6px"><div class="mo">${nhan}</div>${ns.map((n) => {
       const co = chon.some((e) => e.nhan_su_id === n.id && e.vai === vai);
@@ -300,7 +302,7 @@ async function trangMoi(ngayGoiY = '') {
     if (!ngay) { $('#trung').innerHTML = ''; return; }
     const ca = await kho.lich(ngay, ngay), ekip = docEkip($('#ekip'));
     const phut = (g) => Number(g.slice(0, 2)) * 60 + Number(g.slice(3, 5));
-    const trung = gio ? ca.filter((c) => c.gio && Math.abs(phut(c.gio) - phut(gio)) < 120 && c.ekip.some((e) => ekip.some((x) => x.nhan_su_id === e.id))) : [];
+    const trung = gio ? ca.filter((c) => c.gio && Math.abs(phut(c.gio) - phut(gio)) < 120 && c.ekip.some((e) => e.vai !== 'gioi_thieu' && ekip.some((x) => x.vai !== 'gioi_thieu' && x.nhan_su_id === e.id))) : [];
     $('#trung').innerHTML = trung.length ? `<div class="canh">⚠ Trùng ekip trong khung 2 giờ: ${trung.map((c) => `${c.gio} ${esc(c.khach)} (${[...new Set(c.ekip.map((e) => e.ten))].map(esc).join(', ')})`).join('; ')}</div>`
       : ca.length ? `<div class="mo">Ngày này đã có ${ca.length} ca: ${ca.map((c) => (c.gio || '?') + ' ' + esc(c.khach)).join(' · ')}</div>` : '<div class="mo">Ngày này còn trống cả ngày.</div>';
   });

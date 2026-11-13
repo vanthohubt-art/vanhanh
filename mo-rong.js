@@ -784,7 +784,7 @@ export async function veHoSoThem(c, h, chua) {
 // ═════════ LƯƠNG & HOA HỒNG (011, 09/11/2026) ═════════
 // Chỉ phần HOA HỒNG tự tính từ ekip của ca. Lương cứng · chấm công · thưởng · tăng ca vẫn ở app lương.
 // Chủ xem mọi người; nhân viên chỉ thấy dòng của mình (máy chủ lọc, không phải ẩn).
-const TEN_VAI = { sale_online: 'Sale online · giá gói', sale_offline: 'Sale tại studio · phát sinh', chup: 'Chụp · tổng hoá đơn', pts: 'PTS · tổng hoá đơn', stylist: 'Stylist · tổng hoá đơn' };
+const TEN_VAI = { sale_online: 'Sale online · giá gói', sale_offline: 'Sale tại studio · phát sinh', chup: 'Chụp · tổng hoá đơn', pts: 'PTS · tổng hoá đơn', stylist: 'Stylist · tổng hoá đơn', gioi_thieu: 'Giới thiệu khách · tổng hoá đơn' };
 export async function trangHoaHong(c, chu) {
   const hn = c.homNay(), k = kh.docKhoang(chu, hn), nhan = kh.nhanKhoang(k, hn), thang = k.chu, motThang = k.kieu === 'thang';
   const r = await c.kho.ham('crm_hoa_hong_khoang', { p_tu: k.tu, p_den: k.den, p_ai: c.toi });
@@ -820,7 +820,7 @@ export async function trangHoaHong(c, chu) {
 // ═════════ VIỆC CỦA TÔI — chế độ xem nhân viên (015, 09/11/2026) ═════════
 // Nhân viên mở app vào thẳng đây. Chủ xem được qua nút "Việc của tôi" ở Trang chủ.
 // Việc = ca có tên mình đang dừng ở KHÂU CỦA VAI mình (trang_thai.vai_chiu) — máy chủ lọc, không phải ẩn.
-const TEN_VAI_TOI = { chup: 'Chụp', pts: 'PTS', stylist: 'Stylist', makeup: 'Makeup', sale_offline: 'Sale tại studio', sale_online: 'Sale online', chu: 'Duyệt' };
+const TEN_VAI_TOI = { chup: 'Chụp', pts: 'PTS', stylist: 'Stylist', makeup: 'Makeup', sale_offline: 'Sale tại studio', sale_online: 'Sale online', chu: 'Duyệt', gioi_thieu: 'Giới thiệu khách' };
 const VIEC_CUA_VAI = { chup: 'Gửi ảnh gốc cho khách', pts: 'Chỉnh ảnh', sale_online: 'Chốt lịch · nhắc chọn ảnh · giao ảnh', chu: 'Duyệt ảnh trước khi giao' };
 export async function trangCuaToi(c) {
   const [v, hh] = await Promise.all([
@@ -890,7 +890,7 @@ export function hoiPsSoCu(c, h, tachSan, daLuu) {
 // Một tháng (theo ngày chụp). Gom từ dữ liệu sẵn có: ca tham gia, doanh số sale, bán thêm, đánh giá khách, trả ảnh đúng hẹn,
 // makeup, khách tiềm năng, hoa hồng (lấy nguyên từ crm_hoa_hong). Chỗ chưa đủ dữ liệu in "chưa đo được", không in 0.
 // Chủ xem mọi người + tổng đội; nhân viên chỉ thấy thẻ của mình (máy chủ lọc).
-const TEN_VAI_KPI = { sale_online: 'sale online', sale_offline: 'bán thêm', chup: 'chụp', pts: 'PTS', stylist: 'stylist', makeup: 'makeup' };
+const TEN_VAI_KPI = { sale_online: 'sale online', sale_offline: 'bán thêm', chup: 'chụp', pts: 'PTS', stylist: 'stylist', makeup: 'makeup', gioi_thieu: 'giới thiệu khách' };
 export async function trangKpi(c, thangChon) {
   const thang = /^\d{4}-\d{2}$/.test(thangChon || '') ? thangChon : c.homNay().slice(0, 7);
   const r = await c.kho.ham('crm_kpi', { p_thang: thang + '-01', p_ai: c.toi });
