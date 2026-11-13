@@ -1076,3 +1076,103 @@ export async function trangLaiLo(c, thangChon) {
     c.chay(async () => { await c.kho.ham('crm_ngung_chi_dinh_ky', { p_id: x.id, p_tu_thang: thang + '-01', p_ai: c.toi }); c.bao('Đã ngừng'); trangLaiLo(c, thang); });
   }));
 }
+
+// ═════════ BẢNG LƯƠNG THÁNG (040, 14/11/2026) ═════════
+// Theo mẫu bảng lương T10/2026: lương cứng + hoa hồng (tự tính) + tăng ca + phụ cấp/thưởng − phạt − đã ứng = cần thanh toán.
+// Chấm công lấy từ máy vân tay, anh Thọ nhập một lần cuối tháng. Chốt ⇒ bản chụp, sửa ca sau đó không đổi lương đã trả.
+// Nhân viên chỉ thấy phiếu của mình (máy chủ lọc).
+const VAI_LUONG = { sale_online: 'Sale online 3% · giá gói', sale_offline: 'Bán thêm tại studio 3% · phát sinh', chup: 'Chụp 2,5% · tổng hoá đơn', pts: 'Photoshop 2% · tổng hoá đơn',
+  stylist: 'Stylist · tổng hoá đơn', gioi_thieu: 'Giới thiệu khách 10% · giá gói', makeup: 'Makeup theo lượt' };
+export async function trangBangLuong(c, thangChon) {
+  const thang = /^\d{4}-\d{2}$/.test(thangChon || '') ? thangChon : c.homNay().slice(0, 7);
+  const r = await c.kho.ham('crm_bang_luong', { p_thang: thang + '-01', p_ai: c.toi });
+  const doiThang = (k) => { const d = new Date(thang + '-01T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + k); return d.toISOString().slice(0, 7); };
+  const tenThang = `tháng ${Number(thang.slice(5))}/${thang.slice(0, 4)}`;
+  const so = (v) => Number(v || 0).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
+  const phieu = (x) => `<div class="the-ca" style="border-left-color:var(--nhan)"><div class="hang"><span class="ten">${c.esc(x.ten)}</span>
+      <span class="phu" style="margin-left:auto">${r.chot ? 'đã chốt' : 'chưa chốt'}</span></div>
+      <table>
+        <tr><td>Lương cứng</td><td class="so">${c.tien(x.luong_cung)}</td></tr>
+        ${x.hoa_hong_dong.map((v) => `<tr><td style="padding-left:14px">${VAI_LUONG[v.vai] || v.vai}<br><span class="mo nho">${v.mau != null ? `${v.so_ca} ca · ${c.tien(v.mau)}` : `${v.so_ca} ca · ${v.lon} người lớn · ${v.be} bé`}</span></td><td class="so">${c.tien(v.tien)}</td></tr>`).join('')}
+        ${Number(x.tc_trong) || Number(x.tc_ngoai) ? `<tr><td>Tăng ca<br><span class="mo nho">trong giờ ${so(x.tc_trong)}h × ${c.tien(x.don_gia_tc_trong)} · ngoài giờ ${so(x.tc_ngoai)}h × ${c.tien(x.don_gia_tc_ngoai)}</span></td><td class="so">${c.tien(x.tang_ca)}</td></tr>` : ''}
+        ${x.phu_cap_dong.map((p) => `<tr><td>${c.esc(p.ten)}<br><span class="mo nho">${so(p.so)} × ${c.tien(p.don_gia)}</span></td><td class="so">${c.tien(p.tien)}</td></tr>`).join('')}
+        ${Number(x.thuong) ? `<tr><td>Thưởng khác</td><td class="so">${c.tien(x.thuong)}</td></tr>` : ''}
+        <tr><th>Tổng</th><th class="so">${c.tien(x.tong)}</th></tr>
+        ${Number(x.phat) ? `<tr><td>Phạt</td><td class="so" style="color:var(--do)">−${c.tien(x.phat)}</td></tr>` : ''}
+        ${Number(x.da_ung) ? `<tr><td>Đã ứng</td><td class="so">−${c.tien(x.da_ung)}</td></tr>` : ''}
+        <tr><th>Cần thanh toán</th><th class="so" style="color:var(--xanh)">${c.tien(x.can_thanh_toan)}</th></tr>
+      </table>${x.ghi_chu ? `<div class="mo nho" style="margin-top:6px">${c.esc(x.ghi_chu)}</div>` : ''}</div>`;
+  const nav = `<a class="nut phu nho" href="#/bang-luong/${doiThang(-1)}">‹ Tháng trước</a> <a class="nut phu nho" href="#/bang-luong/${doiThang(1)}">Tháng sau ›</a>`;
+  if (!r.la_chu) {
+    c.trang.innerHTML = c.dauTrang('Thu chi', 'Phiếu lương của tôi', `${tenThang} · hoa hồng tự tính từ các ca có tên bạn${r.chot ? '' : ' — anh Thọ chưa chốt, số còn có thể đổi'}.`, nav)
+      + (r.nguoi.length ? phieu(r.nguoi[0]) : '<div class="the trong">Chưa có phiếu lương tháng này.</div>');
+    return;
+  }
+  const ds = r.nguoi, daNhap = ds.filter((x) => x.da_nhap).length;
+  const muc = (r.muc_dm || []).filter((m) => m.ma !== 'an_trua');
+  c.trang.innerHTML = c.dauTrang('Thu chi', 'Bảng lương tháng',
+    `${tenThang} · lương cứng + hoa hồng máy tự tính; ngày công, tăng ca, thưởng, phạt anh nhập từ máy chấm công. ${r.chot ? `<b>Đã chốt ${r.chot_luc}</b> (${c.esc(r.chot_boi || '')}).` : 'Chưa chốt.'}`,
+    nav + (r.chot ? ` <button class="nut phu nho" id="bl-mo">Mở chốt</button>` : ` <button class="nut nho" id="bl-chot">Chốt lương ${tenThang}</button>`)) + `
+    ${!r.chot && r.thieu?.length ? `<div class="canh">⚠ ${r.thieu.length} ca trong tháng thiếu ekip / sale online / tiền ⇒ hoa hồng có thể thiếu. <a href="#/hoa-hong/${thang}">Xem các ca</a></div>` : ''}
+    <div class="so-lieu bon">
+      ${c.theSo('#/bang-luong/' + thang, 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Tổng lương', c.trieu(r.tong), `${ds.length} người`)}
+      ${c.theSo('#/bang-luong/' + thang, 'vi', ['var(--tt8n)', 'var(--tt8c)'], 'Cần thanh toán', c.trieu(r.can_thanh_toan), 'sau phạt và đã ứng')}
+      ${c.theSo('#/bang-luong/' + thang, 'hd', ['var(--vang-nhat)', '#8A5A00'], 'Đã nhập chấm công', `${daNhap}/${ds.length}`, r.chot ? 'đã chốt' : 'bấm tên để nhập')}
+      ${c.theSo('#/lai-lo/' + thang, 'dich', ['var(--nhan-nhat)', 'var(--nhan-dam)'], 'Lãi lỗ tháng', 'Xem', 'lãi lỗ dùng tổng bảng lương')}
+    </div>
+    <div class="the cuon-ngang"><table style="min-width:760px">
+      <tr><th>Nhân viên</th><th class="so">Lương cứng</th><th class="so">Hoa hồng</th><th class="so">Tăng ca</th><th class="so">Phụ cấp</th><th class="so">Thưởng</th><th class="so">Phạt</th><th class="so">Đã ứng</th><th class="so">Cần TT</th></tr>
+      ${ds.map((x) => `<tr><td><a href="#" data-bl="${x.id}"><b>${c.esc(x.ten)}</b></a>${x.da_nhap ? '' : ' <span class="nhan vang" style="font-size:11px">chưa nhập</span>'}</td>
+        <td class="so">${c.tien(x.luong_cung)}</td><td class="so">${c.tien(x.hoa_hong)}</td><td class="so" style="${Number(x.tang_ca) < 0 ? 'color:var(--do)' : ''}">${c.tien(x.tang_ca)}</td>
+        <td class="so">${c.tien(x.phu_cap)}</td><td class="so">${c.tien(x.thuong)}</td><td class="so">${Number(x.phat) ? '−' + c.tien(x.phat) : '—'}</td>
+        <td class="so">${Number(x.da_ung) ? '−' + c.tien(x.da_ung) : '—'}</td><td class="so"><b>${c.tien(x.can_thanh_toan)}</b></td></tr>`).join('')}
+      <tr><th>Tổng</th><th class="so">${c.tien(ds.reduce((a, x) => a + n(x.luong_cung), 0))}</th><th class="so">${c.tien(ds.reduce((a, x) => a + n(x.hoa_hong), 0))}</th>
+        <th class="so">${c.tien(ds.reduce((a, x) => a + n(x.tang_ca), 0))}</th><th class="so">${c.tien(ds.reduce((a, x) => a + n(x.phu_cap), 0))}</th>
+        <th class="so">${c.tien(ds.reduce((a, x) => a + n(x.thuong), 0))}</th><th class="so">${c.tien(r.tong_phat)}</th>
+        <th class="so">${c.tien(ds.reduce((a, x) => a + n(x.da_ung), 0))}</th><th class="so">${c.tien(r.can_thanh_toan)}</th></tr>
+    </table></div>
+    <div class="hai-cot"><div id="bl-chi-tiet"><div class="the mo">Bấm tên một người để xem phiếu và nhập chấm công.</div></div>
+      <div class="the"><h2>Lương cứng & đơn giá tăng ca</h2><div class="mo nho" style="margin-bottom:6px">Đổi ở đây áp cho các tháng chưa chốt. Tháng đã chốt giữ nguyên.</div>
+        <table><tr><th>Người</th><th class="so">Lương cứng</th><th class="so">TC trong giờ /h</th><th class="so">TC ngoài giờ /h</th><th></th></tr>
+        ${ds.map((x) => `<tr data-cfg="${x.id}"><td>${c.esc(x.ten)}</td>
+          <td><input data-k="luong_cung" inputmode="numeric" value="${x.luong_cung}" style="width:110px;text-align:right"></td>
+          <td><input data-k="tc_trong" inputmode="numeric" value="${x.don_gia_tc_trong}" style="width:80px;text-align:right"></td>
+          <td><input data-k="tc_ngoai" inputmode="numeric" value="${x.don_gia_tc_ngoai}" style="width:80px;text-align:right"></td>
+          <td><button class="nut phu nho" data-luu-cfg="${x.id}">Lưu</button></td></tr>`).join('')}</table>
+        <div class="mo nho" style="margin-top:6px">Đơn giá phụ cấp: ${(r.muc_dm || []).map((m) => `${c.esc(m.ten)} ${c.tien(m.don_gia)}`).join(' · ')}. Đổi đơn giá thì nhắn trợ lý.</div></div></div>`;
+  // '8,5' / '8.5' / '-60' = số giờ lẻ; '1.000.000' = tiền có dấu chấm nghìn
+  const soNhap = (s) => { const t = String(s ?? '').trim().replace(/\s/g, ''); return /^-?\d+[.,]\d{1,2}$/.test(t) ? t.replace(',', '.') : t.replace(/[.,]/g, ''); };
+  const moNguoi = (x) => {
+    const khoa = r.chot ? 'disabled' : '';
+    c.$('#bl-chi-tiet').innerHTML = phieu(x) + `<div class="the"><h2>Nhập chấm công · ${c.esc(x.ten)}</h2>
+      ${r.chot ? '<div class="mo">Tháng đã chốt — mở chốt để sửa.</div>' : ''}
+      <div class="hai">
+        <label>Ngày công (ăn trưa)<input id="bl-nc" inputmode="decimal" value="${x.ngay_cong ?? ''}" ${khoa}></label>
+        <label>Tăng ca trong giờ (giờ, âm = thiếu giờ)<input id="bl-t1" inputmode="decimal" value="${x.tc_trong || ''}" ${khoa}></label>
+        <label>Tăng ca ngoài giờ (giờ)<input id="bl-t2" inputmode="decimal" value="${x.tc_ngoai || ''}" ${khoa}></label>
+        ${muc.map((m) => `<label>${c.esc(m.ten)} <span class="mo nho">× ${c.tien(m.don_gia)}</span><input data-muc="${m.ma}" inputmode="decimal" value="${x.muc?.[m.ma] ?? ''}" placeholder="0" ${khoa}></label>`).join('')}
+        <label>Thưởng khác (đồng)<input id="bl-th" inputmode="numeric" value="${x.thuong || ''}" ${khoa}></label>
+        <label>Phạt (đồng)<input id="bl-ph" inputmode="numeric" value="${x.phat || ''}" ${khoa}></label>
+        <label>Đã ứng (đồng)<input id="bl-ung" inputmode="numeric" value="${x.da_ung || ''}" ${khoa}></label>
+        <label>Ghi chú<input id="bl-gc" value="${c.esc(x.ghi_chu || '')}" ${khoa}></label>
+      </div>
+      ${r.chot ? '' : '<div class="hang-nut" style="margin-top:10px"><button class="nut nho" id="bl-luu">Lưu</button></div>'}</div>`;
+    if (r.chot) return;
+    c.$('#bl-luu').onclick = () => c.chay(async () => {
+      const m = {}; document.querySelectorAll('[data-muc]').forEach((i) => { const v = soNhap(i.value); if (v) m[i.dataset.muc] = Number(v); });
+      await c.kho.ham('crm_luu_bang_luong', { p_thang: thang + '-01', d: { nhan_su_id: x.id, ngay_cong: soNhap(c.$('#bl-nc').value), tc_trong: soNhap(c.$('#bl-t1').value),
+        tc_ngoai: soNhap(c.$('#bl-t2').value), muc: m, thuong: soNhap(c.$('#bl-th').value), phat: soNhap(c.$('#bl-ph').value), da_ung: soNhap(c.$('#bl-ung').value), ghi_chu: c.$('#bl-gc').value }, p_ai: c.toi });
+      c.bao('Đã lưu ' + x.ten); await trangBangLuong(c, thang);
+      const moi = document.querySelector(`[data-bl="${x.id}"]`); if (moi) moi.click();
+    });
+  };
+  document.querySelectorAll('[data-bl]').forEach((a) => (a.onclick = (e) => { e.preventDefault(); moNguoi(ds.find((x) => String(x.id) === a.dataset.bl)); c.$('#bl-chi-tiet').scrollIntoView({ behavior: 'smooth', block: 'start' }); }));
+  document.querySelectorAll('[data-luu-cfg]').forEach((b) => (b.onclick = () => c.chay(async () => {
+    const h = b.closest('tr'), g = (k) => soNhap(h.querySelector(`[data-k="${k}"]`).value);
+    await c.kho.ham('crm_luu_luong_nguoi', { d: { id: Number(b.dataset.luuCfg), luong_cung: g('luong_cung'), tc_trong: g('tc_trong'), tc_ngoai: g('tc_ngoai') }, p_ai: c.toi });
+    c.bao('Đã lưu'); trangBangLuong(c, thang);
+  })));
+  const chot = (v) => c.chay(async () => { await c.kho.ham('crm_chot_bang_luong', { p_thang: thang + '-01', p_chot: v, p_ai: c.toi }); c.bao(v ? 'Đã chốt lương' : 'Đã mở chốt'); trangBangLuong(c, thang); });
+  if (c.$('#bl-chot')) c.$('#bl-chot').onclick = () => { if (confirm(`Chốt lương ${tenThang}? Sau khi chốt, sửa ca không làm đổi lương nữa.`)) chot(true); };
+  if (c.$('#bl-mo')) c.$('#bl-mo').onclick = () => { if (confirm(`Mở chốt lương ${tenThang}? Lương sẽ tính lại theo dữ liệu hiện tại.`)) chot(false); };
+}
