@@ -520,7 +520,8 @@ async function docTomAlbum(ma) {
 }
 async function veAlbum(c, h, al, el, veLai) {
   if (!el) return;
-  const linkKhach = al.ma ? `${ALBUM_URL}?a=${al.ma}` : '';
+  // 13/11/2026: link gửi khách là trang bọc trên web (album bản 4) — khách không phải thấy link script.google.com.
+  const linkKhach = al.ma ? `https://homestudio247.com/chon-anh/?a=${al.ma}` : '';
   const dauThe = `<div class="dau-the"><h2>Album chọn ảnh</h2><span class="phai"><a class="nut phu nho" href="${ALBUM_URL}?ql" target="_blank" rel="noopener">Tạo / quản lý album</a></span></div>`;
   const oGan = `<div class="hai" style="margin-top:8px"><label>Link album của khách<input id="al-link" value="${c.esc(linkKhach)}" placeholder="Dán link …/exec?a=xxxxxxxxxxxx"></label>
     <div style="align-self:end"><button class="nut phu nho" id="al-gan">${al.ma ? 'Đổi / gỡ' : 'Gắn album'}</button></div></div>`;
@@ -541,10 +542,15 @@ async function veAlbum(c, h, al, el, veLai) {
       ${t.tienNang ? `<tr><td>Nâng ảnh tặng ${c.esc(t.tang.co)} ${c.esc(t.tang.cl)} → ${c.esc(t.tang.nangLen)}</td><td class="so">${c.tien(t.tienNang)}</td></tr>` : ''}
       ${t.tienAnhThem ? `<tr><td>Ảnh sửa vượt gói × ${t.vuot}</td><td class="so">${c.tien(t.tienAnhThem)}</td></tr>` : t.vuot && t.giaAnhThemChuaChot ? `<tr><td colspan="2" class="mo">Vượt ${t.vuot} ảnh — giá ảnh thêm chưa chốt, báo khách sau.</td></tr>` : ''}
       <tr class="tong"><td>Phát sinh từ album</td><td class="so">${c.tien(t.tongPhatSinh)}</td></tr></table>
+    ${(t.chon || []).length ? `<details style="margin-top:8px"${daGui ? ' open' : ''}><summary><b>Ảnh khách chọn (${t.chon.length})</b>${t.chon.some((x) => x.ghiChu) ? ` · ${t.chon.filter((x) => x.ghiChu).length} ảnh có ghi chú sửa` : ''}</summary>
+      <table style="margin-top:6px">${t.chon.map((x) => `<tr><td style="white-space:nowrap">${c.esc(x.ten)}</td><td>${x.ghiChu ? c.esc(x.ghiChu) : '<span class="mo">—</span>'}</td></tr>`).join('')}</table>
+      <div class="hang-nut" style="margin-top:6px"><button class="nut phu nho" id="al-chep">Chép tên ảnh cho KHACH-CHON.txt</button></div></details>` : ''}
     ${al.nhap_luc ? `<div class="mo" style="margin-top:6px">✓ Đã đưa vào hoá đơn lúc ${al.nhap_luc}.</div>`
       : daGui && t.tongPhatSinh > 0 && c.coTien() ? `<div class="hang-nut" style="margin-top:8px"><button class="nut nho" id="al-nhap">Đưa ${c.tien(t.tongPhatSinh)} vào hoá đơn</button></div>`
       : !daGui ? '<div class="mo" style="margin-top:6px">Chờ khách bấm "Gửi" trong album rồi mới đưa vào hoá đơn.</div>' : ''}` + oGan;
   ganNut();
+  const chep = el.querySelector('#al-chep');
+  if (chep) chep.onclick = () => navigator.clipboard.writeText(t.khachChonTxt || '').then(() => c.bao(`Đã chép ${t.chon.length} tên ảnh — dán vào _LOC\\KHACH-CHON.txt rồi chạy KHACH-CHON.bat`), () => c.bao('Không chép được, bôi đen danh sách để chép tay'));
   const nut = el.querySelector('#al-nhap');
   if (nut) nut.onclick = () => c.chay(async () => {
     const moi = await docTomAlbum(al.ma);   // đọc lại ngay lúc bấm — không dùng số cũ trên màn hình
