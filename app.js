@@ -2,10 +2,10 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261113a';
+import * as kho from './kho.js?v=20261113b';
 import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261111e';
 import { psTuSo, ghiChuSo } from './goi-gom.js?v=20261111e';
-import * as mr from './mo-rong.js?v=20261113a';
+import * as mr from './mo-rong.js?v=20261113b';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
@@ -111,7 +111,7 @@ function theCa(h, phu = '') {
 
 // ═════════ TRANG CHỦ ═════════
 const BO_PHAN = { sale: ['Sale · tư vấn', 'Chốt lịch, thu cọc, xếp ekip'], hau_ky: ['Hậu kỳ', 'Gửi ảnh gốc, chỉnh, trả ảnh đúng hạn'], cskh: ['CSKH · thu ngân', 'Nhắc khách chọn ảnh, thu nốt tiền'] };
-const NHOM_GAP = ['qua_hen', 'thieu_tho', 'sap_chup_chua_coc'];
+const NHOM_GAP = ['qua_hen', 'sap_chup_chua_coc'];
 // Đối chiếu sổ Sheet ⇄ CRM đêm qua (Apps Script 21:00, crm/db/023) — chỉ chủ. Không chặn trang chủ: lỗi thì im.
 async function veDoiChieuDem() {
   const o = $('#dc-dem'); if (!o || !laChu()) return;
@@ -182,7 +182,7 @@ function veDaiGap(tc) {
   const d = $('#dai-gap');
   if (!tc || !tc.gap || !coTien()) { d.hidden = true; return; }
   const dem = (k) => tc.viec.find((v) => v.nhom === k)?.so || 0;
-  d.innerHTML = `<b>${tc.gap} việc cần xử lý ngay</b>${dem('qua_hen') ? `<span>${dem('qua_hen')} ca quá hẹn trả ảnh</span>` : ''}${dem('thieu_tho') ? `<span>${dem('thieu_tho')} ca sắp chụp chưa xếp thợ</span>` : ''}${dem('sap_chup_chua_coc') ? `<span>${dem('sap_chup_chua_coc')} ca sắp chụp chưa thu cọc</span>` : ''}<span class="xem">Xem ›</span>`;
+  d.innerHTML = `<b>${tc.gap} việc cần xử lý ngay</b>${dem('qua_hen') ? `<span>${dem('qua_hen')} ca quá hẹn trả ảnh</span>` : ''}${dem('sap_chup_chua_coc') ? `<span>${dem('sap_chup_chua_coc')} ca sắp chụp chưa thu cọc</span>` : ''}<span class="xem">Xem ›</span>`;
   d.hidden = false;
 }
 async function lamMoiDaiGap() { try { tcNho = await kho.trangChu(); veDaiGap(tcNho); } catch { /* không chặn trang */ } }
