@@ -7,7 +7,7 @@ import { SUPABASE_URL, SUPABASE_KHOA_CONG_KHAI } from './cau-hinh.js?v=20261109h
 export const THAT = !!(SUPABASE_URL && SUPABASE_KHOA_CONG_KHAI) && !new URLSearchParams(location.search).has('thu');
 let db, sb;
 const so = (v) => (v == null ? 0 : Number(v));
-const SQL_THU = ['../db/001-bang.sql', '../db/002-danh-muc.sql', '../db/004-ham-app.sql', '../db/007-ham-tong-quan.sql', '../db/008-mo-rong.sql', '../db/009-pancake-lead.sql', '../db/010-album.sql', '../db/011-luong.sql', '../db/012-make-ngoai.sql', '../db/013-nhip.sql', '../db/014-dang-bai.sql', '../db/015-viec-cua-toi.sql', '../db/016-bao-cao-khoang.sql', '../db/017-thieu-hen.sql', '../db/019-tim-theo-ngay.sql', '../db/020-cong-no-khoang.sql', '../db/021-khoang-ngay.sql', '../db/024-dong-ca-cu.sql', '../db/025-cho-lay-anh.sql', '../db/026-huy-hop-dong.sql', '../db/027-sua-hop-dong.sql', '../db/028-ho-so-khach.sql', '../db/029-ps-in-khach.sql', '../db/030-kpi.sql', '../db/031-ban-them.sql', '../db/032-cskh-moc.sql', '../db/034-hen-lead-tu-dong.sql', '../db/036-bo-viec-xep-tho.sql', '../db/037-ngay-thu.sql', '../db/038-lai-lo.sql', '../db/039-gioi-thieu.sql', '../db/040-bang-luong.sql', '../db/041-make-bang-luong.sql', '../db/042-mica-chup-them.sql'];
+const SQL_THU = ['../db/001-bang.sql', '../db/002-danh-muc.sql', '../db/004-ham-app.sql', '../db/007-ham-tong-quan.sql', '../db/008-mo-rong.sql', '../db/009-pancake-lead.sql', '../db/010-album.sql', '../db/011-luong.sql', '../db/012-make-ngoai.sql', '../db/013-nhip.sql', '../db/014-dang-bai.sql', '../db/015-viec-cua-toi.sql', '../db/016-bao-cao-khoang.sql', '../db/017-thieu-hen.sql', '../db/019-tim-theo-ngay.sql', '../db/020-cong-no-khoang.sql', '../db/021-khoang-ngay.sql', '../db/024-dong-ca-cu.sql', '../db/025-cho-lay-anh.sql', '../db/026-huy-hop-dong.sql', '../db/027-sua-hop-dong.sql', '../db/028-ho-so-khach.sql', '../db/029-ps-in-khach.sql', '../db/030-kpi.sql', '../db/031-ban-them.sql', '../db/032-cskh-moc.sql', '../db/034-hen-lead-tu-dong.sql', '../db/036-bo-viec-xep-tho.sql', '../db/037-ngay-thu.sql', '../db/038-lai-lo.sql', '../db/039-gioi-thieu.sql', '../db/040-bang-luong.sql', '../db/041-make-bang-luong.sql', '../db/042-mica-chup-them.sql', '../db/043-giam-gia-phat-sinh.sql'];
 const docSql = async (f) => (await fetch(f, { cache: 'no-store' })).text();
 
 export async function moKho(ten = 'crm-home-studio') {
@@ -23,7 +23,7 @@ export async function moKho(ten = 'crm-home-studio') {
   if (!rows[0].co) for (const f of SQL_THU) await db.exec(await docSql(f));
   else if (!rows[0].co_ham) await db.exec(await docSql('../db/004-ham-app.sql'));   // sổ thử cũ (trước 08/11) chưa có hàm
   // 007 toàn "create or replace" ⇒ nạp lại mỗi lần mở để sổ thử cũ luôn có bản hàm mới nhất.
-  if (rows[0].co) for (const f of ['../db/007-ham-tong-quan.sql', '../db/008-mo-rong.sql', '../db/009-pancake-lead.sql', '../db/010-album.sql', '../db/011-luong.sql', '../db/012-make-ngoai.sql', '../db/013-nhip.sql', '../db/014-dang-bai.sql', '../db/015-viec-cua-toi.sql', '../db/016-bao-cao-khoang.sql', '../db/017-thieu-hen.sql', '../db/019-tim-theo-ngay.sql', '../db/020-cong-no-khoang.sql', '../db/021-khoang-ngay.sql', '../db/024-dong-ca-cu.sql', '../db/025-cho-lay-anh.sql', '../db/026-huy-hop-dong.sql', '../db/027-sua-hop-dong.sql', '../db/028-ho-so-khach.sql', '../db/029-ps-in-khach.sql', '../db/030-kpi.sql', '../db/031-ban-them.sql', '../db/032-cskh-moc.sql', '../db/034-hen-lead-tu-dong.sql', '../db/036-bo-viec-xep-tho.sql', '../db/037-ngay-thu.sql', '../db/038-lai-lo.sql', '../db/039-gioi-thieu.sql', '../db/040-bang-luong.sql', '../db/041-make-bang-luong.sql', '../db/042-mica-chup-them.sql']) await db.exec(await docSql(f));
+  if (rows[0].co) for (const f of ['../db/007-ham-tong-quan.sql', '../db/008-mo-rong.sql', '../db/009-pancake-lead.sql', '../db/010-album.sql', '../db/011-luong.sql', '../db/012-make-ngoai.sql', '../db/013-nhip.sql', '../db/014-dang-bai.sql', '../db/015-viec-cua-toi.sql', '../db/016-bao-cao-khoang.sql', '../db/017-thieu-hen.sql', '../db/019-tim-theo-ngay.sql', '../db/020-cong-no-khoang.sql', '../db/021-khoang-ngay.sql', '../db/024-dong-ca-cu.sql', '../db/025-cho-lay-anh.sql', '../db/026-huy-hop-dong.sql', '../db/027-sua-hop-dong.sql', '../db/028-ho-so-khach.sql', '../db/029-ps-in-khach.sql', '../db/030-kpi.sql', '../db/031-ban-them.sql', '../db/032-cskh-moc.sql', '../db/034-hen-lead-tu-dong.sql', '../db/036-bo-viec-xep-tho.sql', '../db/037-ngay-thu.sql', '../db/038-lai-lo.sql', '../db/039-gioi-thieu.sql', '../db/040-bang-luong.sql', '../db/041-make-bang-luong.sql', '../db/042-mica-chup-them.sql', '../db/043-giam-gia-phat-sinh.sql']) await db.exec(await docSql(f));
 }
 
 export async function xoaSachVaNapLai() {
@@ -110,7 +110,7 @@ export async function chiTiet(id) {
   if (!h) return null;
   for (const c of ['gia_goi', 'giam_gia']) h[c] = so(h[c]);
   for (const c of ['tien_goi', 'tien_phat_sinh', 'tong_hoa_don', 'da_thu', 'con_lai', 'tien_thua']) h.tien[c] = so(h.tien[c]);
-  for (const r of h.phatSinh) { r.don_gia = so(r.don_gia); r.thanh_tien = so(r.thanh_tien); }
+  for (const r of h.phatSinh) { r.don_gia = so(r.don_gia); r.giam_gia = so(r.giam_gia || 0); r.thanh_tien = so(r.thanh_tien); }
   for (const r of h.phieuThu) r.so_tien = so(r.so_tien);
   return h;
 }

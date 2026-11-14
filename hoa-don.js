@@ -46,7 +46,7 @@ export function dongHoaDon(h) {
   for (const p of h.phatSinh || []) {
     const soCu = p.mo_ta === PS_SO_CU, sl = soCu ? 1 : Number(p.so_luong) || 1;
     hang.push({ ten: soCu ? 'Phát sinh thêm' : p.mo_ta, chiTiet: soCu ? (h.psChiTiet && h.psChiTiet.length ? h.psChiTiet : ['In ảnh, dịch vụ ngoài gói']) : [],
-      donGia: soCu ? Number(p.thanh_tien) : Number(p.don_gia), sl, uuDai: 0, thanhTien: Number(p.thanh_tien) });
+      donGia: soCu ? Number(p.thanh_tien) : Number(p.don_gia) + Number(p.giam_gia || 0), sl, uuDai: soCu ? 0 : Number(p.giam_gia || 0) * sl, thanhTien: Number(p.thanh_tien) });
   }
   const thu = (h.phieuThu || []).filter((p) => !p.huy && !p.dao).map((p) => ({
     luc: String(p.luc || '').slice(0, 5), so: Number(p.so_tien), hinhThuc: p.hinh_thuc === 'tien_mat' ? 'tiền mặt' : 'chuyển khoản',

@@ -2,8 +2,8 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261114f';
-import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261111e';
+import * as kho from './kho.js?v=20261114g';
+import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261114g';
 import { psTuSo, ghiChuSo } from './goi-gom.js?v=20261111e';
 import * as mr from './mo-rong.js?v=20261114e';
 import * as kh from './khoang.js?v=20261110b';
@@ -381,7 +381,7 @@ async function trangCa(id) {
           <div class="dau-the"><h2>Tiền</h2><span class="phai">${coTien() ? `<button class="nut nho" id="anh-hd">${ic('may')} Ảnh hợp đồng</button>` : ''}</span></div>
           <table>
             <tr><td>Gói ${esc(h.goi_ten)}${h.giam_gia ? ` (giảm ${tien(h.giam_gia)})` : ''}</td><td class="so">${tien(h.tien.tien_goi)}</td></tr>
-            ${h.phatSinh.map((p) => `<tr><td>${esc(p.mo_ta)}${p.so_luong > 1 ? ' × ' + p.so_luong : ''}${coTien() ? ` <a href="#" data-xoa="${p.id}" class="mo">xoá</a>` : ''}</td><td class="so">${tien(p.thanh_tien)}</td></tr>`).join('')}
+            ${h.phatSinh.map((p) => `<tr><td>${esc(p.mo_ta)}${p.so_luong > 1 ? ' × ' + p.so_luong : ''}${p.giam_gia ? ` <span class="mo">(${tien(p.don_gia + p.giam_gia)} − giảm ${tien(p.giam_gia)})</span>` : ''}${coTien() ? ` <a href="#" data-xoa="${p.id}" class="mo">xoá</a>` : ''}</td><td class="so">${tien(p.thanh_tien)}</td></tr>`).join('')}
             <tr class="tong"><td>Tổng hoá đơn</td><td class="so">${tien(h.tien.tong_hoa_don)}</td></tr>
             ${h.phieuThu.map((p) => `<tr${p.huy || p.dao ? ' class="phieu-huy"' : ''}><td class="mo">${p.dao ? 'Huỷ phiếu' : p.so_tien < 0 ? 'Hoàn' : 'Đã thu'} ${p.luc} · ${p.hinh_thuc === 'tien_mat' ? 'tiền mặt' : 'chuyển khoản'}${p.ghi_chu && !p.dao ? ' · ' + esc(p.ghi_chu) : ''}${p.dao ? ' · ' + esc((p.ghi_chu || '').replace(/^Huỷ phiếu [0-9/]+ [0-9]+:[0-9]+: /, '')) : ''}${p.huy ? ' · <b>đã huỷ</b>' : ''}${huyDuoc(p) ? ` <a href="#" data-huy-pt="${p.id}" class="mo">huỷ</a>` : ''}</td><td class="so">${tien(-p.so_tien)}</td></tr>`).join('')}
             <tr class="tong"><td>${h.tien.tien_thua ? 'Tiền thừa — hoàn khách hoặc trừ vào in' : 'Còn lại'}</td><td class="so" style="color:${h.tien.con_lai ? 'var(--do)' : 'var(--xanh)'}">${tien(h.tien.tien_thua || h.tien.con_lai)}</td></tr>
@@ -410,7 +410,11 @@ async function trangCa(id) {
           </div>
           <div id="ps-pt" style="margin-top:10px;display:none"><label>Phụ thu<select id="ps-ptma">${DM.phuThu.map((p) => `<option value="${p.ma}">${esc(p.ten)} — ${tien(p.gia_tu)}${p.gia_den ? '–' + tien(p.gia_den) : ''}/${esc(p.don_vi)}</option>`).join('')}</select></label></div>
           <div id="ps-khac" style="margin-top:10px;display:none"><label><span id="ps-mota-nhan">Mô tả</span><input id="ps-mota" placeholder="Ảnh sửa thêm, album…"></label></div>
-          <label style="margin-top:10px">Đơn giá<input id="ps-gia" type="number" min="0" step="1000"></label>
+          <div class="hai" style="margin-top:10px">
+            <label>Đơn giá<input id="ps-gia" type="number" min="0" step="1000"></label>
+            <label>Giảm giá (mỗi tấm)<input id="ps-giam" type="number" min="0" step="1000" placeholder="0"></label>
+          </div>
+          <p class="mo" id="ps-con" style="margin:6px 0 0"></p>
           <div class="hang-nut" style="margin-top:10px"><button class="nut nho" id="ps-them">Thêm vào hoá đơn</button></div>
         </div>` : KHONG_TIEN}
         <div class="the"><h2>Lịch sử</h2>
@@ -446,14 +450,14 @@ async function trangCa(id) {
     $('#pt-qr').onclick = () => chay(() => moQrThu(h, Number($('#pt-tien').value)));
     const veCl = () => {
       const ds = DM.giaIn.filter((g) => g.co === $('#ps-co').value);
-      // 042: Mica (ngoài đường bán thêm) hiện cuối danh sách, đơn giá để trống cho sale điền; giá bảng chỉ để tham khảo.
-      $('#ps-cl').innerHTML = ds.map((g) => g.ban_them === false
-        ? `<option value="${g.chat_lieu}" data-gia="" data-tk="${g.gia}">${esc(g.chat_lieu_ten)} — sale điền giá</option>`
-        : `<option value="${g.chat_lieu}" data-gia="${g.gia}">${esc(g.chat_lieu_ten)} — ${tien(g.gia)}</option>`).join('');
+      // 042/043: Mica (ngoài đường bán thêm) hiện cuối danh sách, lấy sẵn giá bảng; muốn bớt cho khách thì điền ô Giảm giá.
+      $('#ps-cl').innerHTML = ds.map((g) => `<option value="${g.chat_lieu}" data-gia="${g.gia}">${esc(g.chat_lieu_ten)} — ${tien(g.gia)}</option>`).join('');
       datGiaCl();
     };
-    const datGiaCl = () => { const o = $('#ps-cl').selectedOptions[0]; $('#ps-gia').value = o ? o.dataset.gia : '';
-      $('#ps-gia').placeholder = o && o.dataset.tk ? 'Sale điền giá · bảng tham khảo ' + tien(Number(o.dataset.tk)) : ''; };
+    const veCon = () => { const g = Number($('#ps-gia').value) || 0, gi = Number($('#ps-giam').value) || 0, sl = Number($('#ps-sl').value) || 1;
+      $('#ps-con').innerHTML = gi > 0 ? `${tien(g)} − giảm ${tien(gi)} = <b>${tien(g - gi)}</b>${sl > 1 ? ` × ${sl} = <b>${tien((g - gi) * sl)}</b>` : ''}` : ''; };
+    const datGiaCl = () => { const o = $('#ps-cl').selectedOptions[0]; $('#ps-gia').value = o ? o.dataset.gia : ''; $('#ps-gia').placeholder = ''; veCon(); };
+    $('#ps-gia').oninput = veCon; $('#ps-giam').oninput = veCon; $('#ps-sl').oninput = veCon;
     const vePt = () => { const p = DM.phuThu.find((x) => x.ma === $('#ps-ptma').value); $('#ps-gia').value = p ? p.gia_tu : ''; };
     $('#ps-co').onchange = veCl; $('#ps-cl').onchange = datGiaCl;
     $('#ps-ptma').onchange = vePt;
@@ -475,9 +479,11 @@ async function trangCa(id) {
       if (!mo_ta) throw new Error('Thiếu mô tả phát sinh.');
       const p = DM.phuThu.find((x) => x.ma === $('#ps-ptma').value);
       const gia = Number($('#ps-gia').value);
-      if ((l === 'chup_them' || (l === 'in' && $('#ps-cl').selectedOptions[0]?.dataset.tk)) && !(gia > 0)) throw new Error('Điền đơn giá trước khi thêm.');
+      const giam = Number($('#ps-giam').value) || 0;
+      if (l === 'chup_them' && !(gia > 0)) throw new Error('Điền đơn giá trước khi thêm.');
+      if (giam < 0 || giam > gia) throw new Error('Giảm giá phải từ 0 tới đúng bằng đơn giá.');
       if (l === 'phu_thu' && p && (gia < p.gia_tu || (p.gia_den && gia > p.gia_den))) throw new Error(`Đơn giá phụ thu này phải trong khoảng ${tien(p.gia_tu)}–${tien(p.gia_den || p.gia_tu)}.`);
-      await kho.themPhatSinh(id, { loai: l, mo_ta, co, chat_lieu, so_luong: $('#ps-sl').value, don_gia: gia }, toi);
+      await kho.themPhatSinh(id, { loai: l, mo_ta, co, chat_lieu, so_luong: $('#ps-sl').value, don_gia: gia, giam_gia: giam }, toi);
       bao('Đã thêm vào hoá đơn'); trangCa(id);
     });
     document.querySelectorAll('[data-xoa]').forEach((a) => (a.onclick = (e) => { e.preventDefault(); chay(async () => {
