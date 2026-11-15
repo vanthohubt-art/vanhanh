@@ -190,22 +190,57 @@ function veDaiGap(tc) {
 async function lamMoiDaiGap() { try { tcNho = await kho.trangChu(); veDaiGap(tcNho); } catch { /* không chặn trang */ } }
 
 // ═════════ TÌM KHÁCH / DANH SÁCH CA ═════════
+// 15/11/2026 anh Thọ: "cần thêm tìm theo ngày, ví dụ ngày 15/11 có mấy khách" — ô ngày + nút Hôm qua/Hôm nay/Ngày mai,
+// gõ "15/11" vào ô tìm cũng ra; có ngày thì xếp theo giờ chụp sớm → muộn và đếm số ca · số khách.
+const ngayTuChu = (s) => {
+  const m = /^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2}|\d{4}))?$/.exec(s.trim());
+  if (!m) return '';
+  const n = homNay(), y = m[3] ? (m[3].length === 2 ? '20' + m[3] : m[3]) : n.slice(0, 4);
+  const d = `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return isNaN(new Date(d + 'T12:00:00Z')) || new Date(d + 'T12:00:00Z').toISOString().slice(0, 10) !== d ? '' : d;
+};
 async function trangTim(q0 = '') {
   const loc = JSON.parse(sessionStorage.getItem('loc') || '{}');
-  if (q0) loc.tim = q0;
-  $('#trang').innerHTML = dauTrang('Bán hàng · tra cứu', 'Tìm khách & hợp đồng', 'Tìm theo tên, số điện thoại hoặc mã hợp đồng (HD-…, SO-… là sổ cũ).') + `
-    <div class="the" style="padding:12px 14px"><input id="tim" value="${esc(loc.tim || '')}" placeholder="Thu Hà, 0912…, HD-2026-…" style="margin-bottom:10px">
+  if (q0) { loc.tim = q0; loc.ngay = ''; }
+  const nut = [['Hôm qua', congNgay(homNay(), -1)], ['Hôm nay', homNay()], ['Ngày mai', congNgay(homNay(), 1)]];
+  $('#trang').innerHTML = dauTrang('Bán hàng · tra cứu', 'Tìm khách & hợp đồng', 'Tìm theo tên, số điện thoại, mã hợp đồng (HD-…, SO-… là sổ cũ) hoặc ngày chụp (15/11).') + `
+    <div class="the" style="padding:12px 14px"><input id="tim" value="${esc(loc.tim || '')}" placeholder="Thu Hà, 0912…, HD-2026-…, 15/11" style="margin-bottom:10px">
+      <div id="loc-ngay" style="display:flex;flex-wrap:wrap;align-items:center;gap:0 4px;margin-bottom:4px">
+        <label style="display:inline-flex;align-items:center;gap:6px;margin:0 8px 6px 0;font-weight:600">Ngày chụp<input id="ngay" type="date" value="${esc(loc.ngay || '')}" style="width:auto;margin:0"></label>
+        ${nut.map(([t, d]) => `<span class="chip ${loc.ngay === d ? 'chon' : ''}" data-ngay="${d}">${t}</span>`).join('')}
+        <span class="chip" data-ngay="" id="bo-ngay" ${loc.ngay ? '' : 'hidden'}>✕ Mọi ngày</span></div>
       <div id="loc-tt"><span class="chip ${!loc.trangThai ? 'chon' : ''}" data-tt="">Tất cả</span>${DM.trangThai.map((t) => `<span class="chip ${String(loc.trangThai) === String(t.so) ? 'chon' : ''}" data-tt="${t.so}">${t.so}. ${esc(t.ten)}</span>`).join('')}</div></div>
     <div class="mo" id="dem" style="margin-bottom:8px"></div>
     <div class="luoi-ca" id="ds"></div>`;
+  const datNgay = (d) => {
+    $('#ngay').value = d;
+    document.querySelectorAll('#loc-ngay .chip[data-ngay]').forEach((c) => c.classList.toggle('chon', !!d && c.dataset.ngay === d));
+    $('#bo-ngay').hidden = !d;
+  };
   const ve = async () => {
-    const l = { tim: $('#tim').value.trim(), trangThai: $('#loc-tt .chon')?.dataset.tt || '' };
+    let tim = $('#tim').value.trim();
+    const goNgay = ngayTuChu(tim);
+    if (goNgay) { datNgay(goNgay); tim = ''; }
+    const ngay = $('#ngay').value;
+    const l = { tim: $('#tim').value.trim(), ngay, trangThai: $('#loc-tt .chon')?.dataset.tt || '' };
     sessionStorage.setItem('loc', JSON.stringify(l));
-    const ds = await kho.dsHopDong(l);
-    $('#dem').textContent = ds.length >= 300 ? 'Hiện 300 ca mới nhất — gõ thêm để lọc.' : `${ds.length} ca`;
-    $('#ds').innerHTML = ds.length ? ds.map((h) => theCa(h)).join('') : '<div class="trong">Không có ca nào khớp.</div>';
+    let ds = await kho.dsHopDong({ tim, trangThai: l.trangThai, tu: ngay, den: ngay });
+    if (ngay) {
+      ds = ds.slice().sort((a, b) => (a.gio_chup || '99').localeCompare(b.gio_chup || '99') || a.id - b.id);
+      const khach = new Set(ds.map((h) => h.sdt || h.khach)).size;
+      $('#dem').innerHTML = `<b>${THU[new Date(ngay + 'T12:00:00Z').getUTCDay()]}, ${ngayVN(ngay)}${ngay.slice(0, 4) !== homNay().slice(0, 4) ? '/' + ngay.slice(0, 4) : ''}: ${ds.length} ca · ${khach} khách</b>`
+        + (coTien() && ds.length ? ` · tổng hoá đơn ${tien(ds.reduce((s, h) => s + Number(h.tong_hoa_don || 0), 0))}` : '')
+        + (ds.some((h) => !h.gio_chup) ? ' · ca chưa ghi giờ xếp cuối' : '');
+    } else $('#dem').textContent = ds.length >= 300 ? 'Hiện 300 ca mới nhất — gõ thêm để lọc.' : `${ds.length} ca`;
+    $('#ds').innerHTML = ds.length ? ds.map((h) => theCa(h)).join('') : `<div class="trong">${ngay ? 'Ngày này chưa có ca nào.' : 'Không có ca nào khớp.'}</div>`;
   };
   let hen; $('#tim').oninput = () => { clearTimeout(hen); hen = setTimeout(() => chay(ve), 250); };
+  $('#ngay').onchange = () => { if (ngayTuChu($('#tim').value)) $('#tim').value = ''; datNgay($('#ngay').value); chay(ve); };
+  document.querySelectorAll('#loc-ngay .chip[data-ngay]').forEach((c) => (c.onclick = () => {
+    const d = c.dataset.ngay && c.dataset.ngay !== $('#ngay').value ? c.dataset.ngay : '';
+    if (ngayTuChu($('#tim').value)) $('#tim').value = '';
+    datNgay(d); chay(ve);
+  }));
   document.querySelectorAll('#loc-tt .chip').forEach((c) => (c.onclick = () => { document.querySelectorAll('#loc-tt .chip').forEach((x) => x.classList.remove('chon')); c.classList.add('chon'); chay(ve); }));
   await ve();
   $('#tim').focus();
