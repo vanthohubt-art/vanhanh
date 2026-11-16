@@ -256,7 +256,9 @@ function chonGoiHtml(chon) {
 function ekipHtml(chon = []) {
   return Object.entries(VAI).map(([vai, nhan]) => {
     // Giới thiệu khách (039): mọi nhân viên trừ Trang (anh Thọ 14/11) — không theo vai.
+    // Sale tại studio (16/11): MỌI người (trừ tài khoản máy) — sale chính không ngồi studio, ai có mặt cũng tư vấn bán thêm.
     const ns = vai === 'gioi_thieu' ? DM.nhanSu.filter((n) => n.ma !== 'TRANG' && !(n.vai || []).includes('may') && !(n.vai || []).includes('chu'))
+      : vai === 'sale_offline' ? DM.nhanSu.filter((n) => !(n.vai || []).includes('may'))
       : DM.nhanSu.filter((n) => (n.vai || []).includes(vai) || (vai === 'chup' && n.vai.includes('chu')));
     if (!ns.length) return '';
     return `<div style="margin-bottom:6px"><div class="mo">${nhan}</div>${ns.map((n) => {
