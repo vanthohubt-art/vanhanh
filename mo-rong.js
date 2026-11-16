@@ -1322,7 +1322,7 @@ export async function trangChamCong(c, thangChon) {
         <div class="mo">${d.lat != null ? `Đã đặt: ${Number(d.lat).toFixed(5)}, ${Number(d.lng).toFixed(5)} · <a href="https://www.google.com/maps?q=${d.lat},${d.lng}" target="_blank" rel="noopener">xem bản đồ</a>${d.sua_boi ? ` · ${c.esc(d.sua_boi)} đặt` : ''}` : '<b>Chưa đặt.</b> Đứng trong studio rồi bấm nút dưới.'}</div>
         <div class="hai" style="margin-top:8px"><label>Bán kính (m)<input id="cc-bk" inputmode="numeric" value="${d.ban_kinh_m || 150}"></label></div>
         <div class="hang-nut" style="margin-top:8px"><button class="nut nho" id="cc-dat">Đặt = chỗ tôi đang đứng</button> <button class="nut phu nho" id="cc-luu-bk">Chỉ lưu bán kính</button></div>
-        <div class="mo nho" id="cc-dat-tt" style="margin-top:6px">Nên đặt bán kính 100–200 m: GPS trong nhà thường lệch 20–60 m.</div></div>`;
+        <div class="mo nho" id="cc-dat-tt" style="margin-top:6px">Bấm bằng <b>điện thoại</b> khi đang đứng trong studio — máy tính không có GPS. Nên đặt bán kính 100–200 m.</div></div>`;
   }
   c.trang.innerHTML = c.dauTrang('Nhân sự', 'Chấm công', `${tenThang} · vào ca / ra ca bằng vị trí + ảnh selfie.`, nav)
     + `<div class="hai-cot"><div>${ban}${ganDay}</div><div>${chu}${bang}</div></div>`;
@@ -1336,8 +1336,8 @@ export async function trangChamCong(c, thangChon) {
   if (c.$('#cc-dat')) c.$('#cc-dat').onclick = () => c.chay(async () => {
     c.$('#cc-dat-tt').textContent = '📍 Đang lấy vị trí… (tối đa 20 giây)';
     const v = await layViTri((x) => { c.$('#cc-dat-tt').textContent = `📍 GPS ±${x.sai_so} m…`; });
-    if (v.sai_so > 60 && !confirm(`GPS đang sai số ±${v.sai_so} m — vẫn đặt vị trí studio ở đây?`)) return;
-    await c.kho.ham('crm_dat_dia_diem', { d: { lat: v.lat, lng: v.lng, ban_kinh_m: bk() }, p_ai: c.toi }); c.bao('Đã đặt vị trí studio'); lai();
+    if (v.sai_so > 100) { c.$('#cc-dat-tt').textContent = `⚠ GPS sai số ±${v.sai_so} m — máy này không có GPS chuẩn (máy tính chỉ đoán theo mạng, hay ra Hồ Gươm). Dùng ĐIỆN THOẠI đứng trong studio rồi bấm lại.`; return; }
+    await c.kho.ham('crm_dat_dia_diem', { d: { lat: v.lat, lng: v.lng, sai_so: v.sai_so, ban_kinh_m: bk() }, p_ai: c.toi }); c.bao('Đã đặt vị trí studio'); lai();
   });
   if (c.$('#cc-luu-bk')) c.$('#cc-luu-bk').onclick = () => c.chay(async () => { await c.kho.ham('crm_dat_dia_diem', { d: { ban_kinh_m: bk() }, p_ai: c.toi }); c.bao('Đã lưu bán kính'); lai(); });
   document.querySelectorAll('[data-cc-ng]').forEach((a) => (a.onclick = (e) => c.chay(async () => {
