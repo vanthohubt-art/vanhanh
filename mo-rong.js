@@ -1086,6 +1086,7 @@ const VAI_LUONG = { sale_online: 'Sale online 3% · giá gói', sale_offline: 'B
 export async function trangBangLuong(c, thangChon) {
   const thang = /^\d{4}-\d{2}$/.test(thangChon || '') ? thangChon : c.homNay().slice(0, 7);
   const r = await c.kho.ham('crm_bang_luong', { p_thang: thang + '-01', p_ai: c.toi });
+  const cc = r.la_chu ? await c.kho.ham('crm_cham_cong_thang', { p_thang: thang + '-01', p_ai: c.toi }).catch(() => null) : null;   // chấm công online (048)
   const doiThang = (k) => { const d = new Date(thang + '-01T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + k); return d.toISOString().slice(0, 7); };
   const tenThang = `tháng ${Number(thang.slice(5))}/${thang.slice(0, 4)}`;
   const so = (v) => Number(v || 0).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
@@ -1158,7 +1159,7 @@ export async function trangBangLuong(c, thangChon) {
     c.$('#bl-chi-tiet').innerHTML = phieu(x) + `<div class="the"><h2>Nhập chấm công · ${c.esc(x.ten)}</h2>
       ${r.chot ? '<div class="mo">Tháng đã chốt — mở chốt để sửa.</div>' : ''}
       <div class="hai">
-        <label>Ngày công (ăn trưa)<input id="bl-nc" inputmode="decimal" value="${x.ngay_cong ?? ''}" ${khoa}></label>
+        <label>Ngày công (ăn trưa)${(() => { const k = cc?.nguoi.find((z) => z.id === x.id); return k && (k.ngay_cong || k.cho_duyet) ? ` <span class="mo nho">· chấm online: <b>${k.ngay_cong}</b> công${k.cho_duyet ? `, ${k.cho_duyet} lượt chờ duyệt` : ''}${r.chot ? '' : ` <a href="#" id="bl-lay-cc" data-so="${k.ngay_cong}">điền số này</a>`}</span>` : ''; })()}<input id="bl-nc" inputmode="decimal" value="${x.ngay_cong ?? ''}" ${khoa}></label>
         <label>Tăng ca trong giờ (giờ, âm = thiếu giờ)<input id="bl-t1" inputmode="decimal" value="${x.tc_trong || ''}" ${khoa}></label>
         <label>Tăng ca ngoài giờ (giờ)<input id="bl-t2" inputmode="decimal" value="${x.tc_ngoai || ''}" ${khoa}></label>
         ${muc.map((m) => `<label>${c.esc(m.ten)} <span class="mo nho">× ${c.tien(m.don_gia)}</span><input data-muc="${m.ma}" inputmode="decimal" value="${x.muc?.[m.ma] ?? ''}" placeholder="0" ${khoa}></label>`).join('')}
@@ -1170,6 +1171,7 @@ export async function trangBangLuong(c, thangChon) {
       </div>
       ${r.chot ? '' : '<div class="hang-nut" style="margin-top:10px"><button class="nut nho" id="bl-luu">Lưu</button></div>'}</div>`;
     if (r.chot) return;
+    if (c.$('#bl-lay-cc')) c.$('#bl-lay-cc').onclick = (e) => { e.preventDefault(); c.$('#bl-nc').value = e.target.dataset.so; };
     c.$('#bl-luu').onclick = () => c.chay(async () => {
       const m = {}; document.querySelectorAll('[data-muc]').forEach((i) => { const v = soNhap(i.value); if (v) m[i.dataset.muc] = Number(v); });
       await c.kho.ham('crm_luu_bang_luong', { p_thang: thang + '-01', d: { nhan_su_id: x.id, ngay_cong: soNhap(c.$('#bl-nc').value), tc_trong: soNhap(c.$('#bl-t1').value),
@@ -1205,4 +1207,145 @@ export async function trangBangLuong(c, thangChon) {
   const chot = (v) => c.chay(async () => { await c.kho.ham('crm_chot_bang_luong', { p_thang: thang + '-01', p_chot: v, p_ai: c.toi }); c.bao(v ? 'Đã chốt lương' : 'Đã mở chốt'); trangBangLuong(c, thang); });
   if (c.$('#bl-chot')) c.$('#bl-chot').onclick = () => { if (confirm(`Chốt lương ${tenThang}? Sau khi chốt, sửa ca không làm đổi lương nữa.`)) chot(true); };
   if (c.$('#bl-mo')) c.$('#bl-mo').onclick = () => { if (confirm(`Mở chốt lương ${tenThang}? Lương sẽ tính lại theo dữ liệu hiện tại.`)) chot(false); };
+}
+
+// ───────── CHẤM CÔNG (048, 16/11/2026) ─────────
+// Vào ca / ra ca bằng điện thoại: CAMERA TRƯỚC chụp selfie trực tiếp (không chọn ảnh có sẵn) + vị trí GPS.
+// Máy chủ tự tính khoảng cách tới studio và ghi giờ của máy chủ; ngoài vùng ⇒ ghi lý do, chờ anh Thọ duyệt.
+const TT_CC = { hop_le: ['xanh', 'tại studio'], cho_duyet: ['vang', 'chờ duyệt'], da_duyet: ['xanh', 'đã duyệt'], tu_choi: ['do', 'từ chối'] };
+const nhanCC = (t) => `<span class="nhan ${TT_CC[t][0]}" style="font-size:11px">${TT_CC[t][1]}</span>`;
+const cachKm = (m) => m == null ? '' : m < 1000 ? `${m} m` : `${(m / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} km`;
+function cachMet(a, b) {
+  const r = (x) => (x * Math.PI) / 180, s1 = Math.sin(r(b.lat - a.lat) / 2), s2 = Math.sin(r(b.lng - a.lng) / 2);
+  return Math.round(2 * 6371000 * Math.asin(Math.sqrt(s1 * s1 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * s2 * s2)));
+}
+// Lấy vị trí: theo dõi tối đa 20 giây, giữ lần có sai số nhỏ nhất, dừng sớm khi ≤ 30 m.
+function layViTri(moi) {
+  return new Promise((ok, hong) => {
+    if (!navigator.geolocation) return hong(new Error('Trình duyệt không hỗ trợ định vị.'));
+    let tot = null, xong = false;
+    const ket = () => { if (xong) return; xong = true; navigator.geolocation.clearWatch(id); clearTimeout(t); tot ? ok(tot) : hong(new Error('Không lấy được vị trí — bật Định vị (GPS) và cho phép trình duyệt dùng vị trí.')); };
+    const id = navigator.geolocation.watchPosition((p) => {
+      const v = { lat: p.coords.latitude, lng: p.coords.longitude, sai_so: Math.round(p.coords.accuracy) };
+      if (!tot || v.sai_so < tot.sai_so) { tot = v; moi && moi(v); }
+      if (v.sai_so <= 30) ket();
+    }, (e) => { if (e.code === 1) { tot = null; ket(); } }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+    const t = setTimeout(ket, 20000);
+  });
+}
+function hopNen(html, basis = 460) {
+  const nen = document.createElement('div'); nen.className = 'hop-nen';
+  nen.innerHTML = `<div class="hop" role="dialog" style="flex-basis:${basis}px">${html}</div>`;
+  document.body.appendChild(nen); return nen;
+}
+function moChamCong(c, loai, me, xong) {
+  const dd = me.dia_diem;
+  const nen = hopNen(`<div class="dau-the"><h2>${loai === 'vao' ? 'Vào ca' : 'Ra ca'} · ${c.esc(me.ten)}</h2><button class="nut phu nho phai" data-dong>Đóng</button></div>
+    <div style="position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:3/4;max-height:52vh;margin:0 auto">
+      <video id="cc-cam" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover;transform:scaleX(-1)"></video>
+      <img id="cc-anh" alt="Ảnh vừa chụp" hidden style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:0;border-radius:0">
+    </div>
+    <div id="cc-vt" class="mo" style="margin:8px 0">📍 Đang lấy vị trí…</div>
+    <label id="cc-ly-nhan" hidden>Lý do chấm ngoài studio (chụp ở đâu, ca nào)<input id="cc-ly" placeholder="VD: chụp kỷ yếu trường Trung Mầu"></label>
+    <div class="hang-nut" style="margin-top:8px"><button class="nut" id="cc-chup" disabled>Chụp ảnh</button> <button class="nut phu" id="cc-lai" hidden>Chụp lại</button> <button class="nut" id="cc-gui" hidden>Gửi chấm công</button></div>
+    <div class="mo nho" style="margin-top:6px">Ảnh và vị trí chỉ anh Thọ xem. Giờ chấm lấy theo máy chủ.</div>`);
+  const $h = (s) => nen.querySelector(s); let luong = null, vt = null, anh = null, huy = false;
+  const dong = () => { huy = true; luong && luong.getTracks().forEach((t) => t.stop()); nen.remove(); };
+  $h('[data-dong]').onclick = dong;
+  const capNut = () => {
+    $h('#cc-chup').disabled = !luong || !!anh; $h('#cc-gui').hidden = !anh; $h('#cc-lai').hidden = !anh; $h('#cc-chup').hidden = !!anh;
+    $h('#cc-gui').disabled = !vt;
+  };
+  navigator.mediaDevices?.getUserMedia({ video: { facingMode: 'user', width: { ideal: 720 } }, audio: false })
+    .then((s) => { if (huy) return s.getTracks().forEach((t) => t.stop()); luong = s; $h('#cc-cam').srcObject = s; capNut(); })
+    .catch(() => { $h('#cc-vt').insertAdjacentHTML('beforebegin', '<div class="canh">Không mở được camera — cho phép trình duyệt dùng camera. Đang mở trong Zalo/Messenger thì bấm ⋯ → Mở bằng trình duyệt.</div>'); });
+  const ve = (v) => {
+    vt = v; const cach = dd.co ? cachMet(dd, v) : null, trong = dd.co && cach <= dd.ban_kinh_m && v.sai_so <= dd.ban_kinh_m;
+    $h('#cc-vt').innerHTML = !dd.co ? `📍 Đã lấy vị trí (±${v.sai_so} m) — anh Thọ chưa đặt vị trí studio nên lượt này sẽ chờ duyệt.`
+      : trong ? `✅ Tại studio · cách ${cachKm(cach)} (GPS ±${v.sai_so} m)`
+      : cach <= dd.ban_kinh_m ? `⚠ GPS chưa chuẩn (±${v.sai_so} m) — ra chỗ thoáng chờ vài giây, hoặc ghi lý do để chờ duyệt.`
+      : `⚠ Cách studio ${cachKm(cach)} — ca ngoài thì ghi lý do, anh Thọ duyệt mới tính công.`;
+    $h('#cc-ly-nhan').hidden = trong; capNut();
+  };
+  layViTri(ve).then(ve).catch((e) => { $h('#cc-vt').innerHTML = `<span style="color:var(--do)">${c.esc(e.message)}</span>`; });
+  $h('#cc-chup').onclick = () => {
+    const v = $h('#cc-cam'), w = 360, h = Math.round((w * v.videoHeight) / (v.videoWidth || 1)) || 480;
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const g = cv.getContext('2d'); g.translate(w, 0); g.scale(-1, 1); g.drawImage(v, 0, 0, w, h);
+    anh = cv.toDataURL('image/jpeg', 0.65); $h('#cc-anh').src = anh; $h('#cc-anh').hidden = false; capNut();
+  };
+  $h('#cc-lai').onclick = () => { anh = null; $h('#cc-anh').hidden = true; capNut(); };
+  $h('#cc-gui').onclick = () => c.chay(async () => {
+    $h('#cc-gui').disabled = true;
+    try {
+      const r = await c.kho.ham('crm_cham_cong', { d: { loai, ...vt, anh, ly_do: $h('#cc-ly').value, thiet_bi: navigator.userAgent }, p_ai: c.toi });
+      c.bao(`${loai === 'vao' ? 'Đã vào ca' : 'Đã ra ca'} lúc ${r.gio}${r.trang_thai === 'cho_duyet' ? ' — chờ anh Thọ duyệt' : ''}`);
+      dong(); xong();
+    } finally { if (document.body.contains(nen)) $h('#cc-gui').disabled = false; }
+  });
+}
+async function xemAnhCC(c, id, nhan) {
+  const a = await c.kho.ham('crm_cham_cong_anh', { p_id: id, p_ai: c.toi });
+  const nen = hopNen(`<div class="dau-the"><h2>${c.esc(nhan)}</h2><button class="nut phu nho phai" data-dong>Đóng</button></div>
+    ${a ? `<img src="${a}" alt="Ảnh chấm công">` : '<div class="the trong">Ảnh đã xoá (quá 120 ngày) hoặc không có.</div>'}`, 380);
+  nen.onclick = (e) => { if (e.target === nen) nen.remove(); }; nen.querySelector('[data-dong]').onclick = () => nen.remove();
+}
+export async function trangChamCong(c, thangChon) {
+  const thang = /^\d{4}-\d{2}$/.test(thangChon || '') ? thangChon : c.homNay().slice(0, 7);
+  const [me, t] = await Promise.all([c.kho.ham('crm_cham_cong_cua_toi', { p_ai: c.toi }), c.kho.ham('crm_cham_cong_thang', { p_thang: thang + '-01', p_ai: c.toi })]);
+  const doiThang = (k) => { const d = new Date(thang + '-01T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + k); return d.toISOString().slice(0, 7); };
+  const tenThang = `tháng ${Number(thang.slice(5))}/${thang.slice(0, 4)}`, so = (v) => Number(v || 0).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
+  const ban = `<div class="the" style="text-align:center">
+      <div class="mo">${me.dang_trong_ca ? `Đang trong ca từ <b>${me.vao_luc}</b>` : 'Chưa vào ca'}</div>
+      <button class="nut" id="cc-bam" style="font-size:18px;padding:14px 34px;margin:10px 0">${me.dang_trong_ca ? 'Ra ca' : 'Vào ca'}</button>
+      <div class="mo nho">Chụp selfie bằng camera trước + vị trí GPS. Ở studio (trong ${me.dia_diem.ban_kinh_m} m) tính công ngay; ca ngoài chờ anh Thọ duyệt.</div>
+      ${me.dia_diem.co ? '' : '<div class="canh" style="margin-top:8px">Chưa đặt vị trí studio — mọi lượt chấm sẽ chờ duyệt.</div>'}
+    </div>`;
+  const ganDay = `<div class="the"><h2>7 ngày gần đây của tôi</h2>${me.gan_day.length ? `<table>${me.gan_day.map((x) => `<tr><td>${x.ngay} ${x.gio}</td><td>${x.loai === 'vao' ? 'Vào' : 'Ra'}</td><td>${nhanCC(x.trang_thai)}</td><td class="mo nho">${x.trong_vung ? '' : cachKm(x.cach_m)}${x.ly_do ? ' · ' + c.esc(x.ly_do) : ''}</td></tr>`).join('')}</table>` : '<div class="mo">Chưa chấm lần nào.</div>'}</div>`;
+  const nav = `<a class="nut phu nho" href="#/cham-cong/${doiThang(-1)}">‹ Tháng trước</a> <a class="nut phu nho" href="#/cham-cong/${doiThang(1)}">Tháng sau ›</a>`;
+  const bang = `<div class="the cuon-ngang"><h2>Bảng công ${tenThang}</h2><table style="min-width:520px">
+      <tr><th>Nhân viên</th><th class="so">Ngày công</th><th class="so">Giờ làm</th><th class="so">Chờ duyệt</th><th class="so">Quên ra ca</th></tr>
+      ${t.nguoi.map((x) => `<tr><td><a href="#" data-cc-ng="${x.id}"><b>${c.esc(x.ten)}</b></a></td><td class="so">${x.ngay_cong}</td><td class="so">${so(x.gio)}</td>
+        <td class="so">${x.cho_duyet ? `<span class="nhan vang">${x.cho_duyet}</span>` : ''}</td><td class="so">${x.quen_ra ? `<span class="nhan do">${x.quen_ra}</span>` : ''}</td></tr>`).join('')}
+    </table><div class="mo nho" style="margin-top:6px">Ngày công = ngày có lượt Vào ca tại studio hoặc đã duyệt. Giờ làm chỉ cộng các cặp vào→ra; quên ra ca thì ngày đó không cộng giờ.</div></div>
+    <div id="cc-chi-tiet"></div>`;
+  let chu = '';
+  if (t.la_chu) {
+    const d = t.dia_diem || {};
+    chu = `<div class="the"><h2>Chờ duyệt (${t.cho_duyet.length})</h2>${t.cho_duyet.length ? t.cho_duyet.map((x) => `<div class="the-ca" style="border-left-color:var(--vang, #E0A800)">
+        <div class="hang"><span class="ten">${c.esc(x.ten)}</span><span class="phu">${x.loai === 'vao' ? 'Vào' : 'Ra'} ${x.ngay} ${x.gio}</span></div>
+        <div class="phu">Cách studio ${cachKm(x.cach_m)} · GPS ±${x.sai_so_m} m · <a href="https://www.google.com/maps?q=${x.lat},${x.lng}" target="_blank" rel="noopener">xem bản đồ</a></div>
+        <div>${c.esc(x.ly_do || '')}</div>
+        <div class="hang-nut"><button class="nut phu nho" data-cc-anh="${x.id}" data-nhan="${c.esc(x.ten)} · ${x.ngay} ${x.gio}">Xem ảnh</button>
+          <button class="nut nho" data-cc-duyet="${x.id}">Duyệt</button> <button class="nut phu nho" data-cc-tu="${x.id}">Từ chối</button></div></div>`).join('') : '<div class="mo">Không có lượt nào chờ.</div>'}</div>
+      <div class="the"><h2>Vị trí studio</h2>
+        <div class="mo">${d.lat != null ? `Đã đặt: ${Number(d.lat).toFixed(5)}, ${Number(d.lng).toFixed(5)} · <a href="https://www.google.com/maps?q=${d.lat},${d.lng}" target="_blank" rel="noopener">xem bản đồ</a>${d.sua_boi ? ` · ${c.esc(d.sua_boi)} đặt` : ''}` : '<b>Chưa đặt.</b> Đứng trong studio rồi bấm nút dưới.'}</div>
+        <div class="hai" style="margin-top:8px"><label>Bán kính (m)<input id="cc-bk" inputmode="numeric" value="${d.ban_kinh_m || 150}"></label></div>
+        <div class="hang-nut" style="margin-top:8px"><button class="nut nho" id="cc-dat">Đặt = chỗ tôi đang đứng</button> <button class="nut phu nho" id="cc-luu-bk">Chỉ lưu bán kính</button></div>
+        <div class="mo nho" id="cc-dat-tt" style="margin-top:6px">Nên đặt bán kính 100–200 m: GPS trong nhà thường lệch 20–60 m.</div></div>`;
+  }
+  c.trang.innerHTML = c.dauTrang('Nhân sự', 'Chấm công', `${tenThang} · vào ca / ra ca bằng vị trí + ảnh selfie.`, nav)
+    + `<div class="hai-cot"><div>${ban}${ganDay}</div><div>${chu}${bang}</div></div>`;
+  const lai = () => trangChamCong(c, thang);
+  c.$('#cc-bam').onclick = () => moChamCong(c, me.dang_trong_ca ? 'ra' : 'vao', me, lai);
+  document.querySelectorAll('[data-cc-anh]').forEach((b) => (b.onclick = () => c.chay(() => xemAnhCC(c, Number(b.dataset.ccAnh), b.dataset.nhan))));
+  const duyet = (id, v) => c.chay(async () => { await c.kho.ham('crm_duyet_cham_cong', { p_id: id, p_duyet: v, p_ai: c.toi }); c.bao(v ? 'Đã duyệt' : 'Đã từ chối'); lai(); });
+  document.querySelectorAll('[data-cc-duyet]').forEach((b) => (b.onclick = () => duyet(Number(b.dataset.ccDuyet), true)));
+  document.querySelectorAll('[data-cc-tu]').forEach((b) => (b.onclick = () => { if (confirm('Từ chối lượt chấm này? Ngày đó sẽ không tính công.')) duyet(Number(b.dataset.ccTu), false); }));
+  const bk = () => c.$('#cc-bk').value.replace(/\D/g, '');
+  if (c.$('#cc-dat')) c.$('#cc-dat').onclick = () => c.chay(async () => {
+    c.$('#cc-dat-tt').textContent = '📍 Đang lấy vị trí… (tối đa 20 giây)';
+    const v = await layViTri((x) => { c.$('#cc-dat-tt').textContent = `📍 GPS ±${x.sai_so} m…`; });
+    if (v.sai_so > 60 && !confirm(`GPS đang sai số ±${v.sai_so} m — vẫn đặt vị trí studio ở đây?`)) return;
+    await c.kho.ham('crm_dat_dia_diem', { d: { lat: v.lat, lng: v.lng, ban_kinh_m: bk() }, p_ai: c.toi }); c.bao('Đã đặt vị trí studio'); lai();
+  });
+  if (c.$('#cc-luu-bk')) c.$('#cc-luu-bk').onclick = () => c.chay(async () => { await c.kho.ham('crm_dat_dia_diem', { d: { ban_kinh_m: bk() }, p_ai: c.toi }); c.bao('Đã lưu bán kính'); lai(); });
+  document.querySelectorAll('[data-cc-ng]').forEach((a) => (a.onclick = (e) => c.chay(async () => {
+    e.preventDefault(); const x = t.nguoi.find((y) => String(y.id) === a.dataset.ccNg);
+    const ds = await c.kho.ham('crm_cham_cong_nguoi', { p_ns: x.id, p_thang: thang + '-01', p_ai: c.toi });
+    c.$('#cc-chi-tiet').innerHTML = `<div class="the"><h2>${c.esc(x.ten)} · ${tenThang}</h2>${ds.length ? `<table>${ds.map((y) => `<tr><td>${y.ngay} ${y.gio}</td><td>${y.loai === 'vao' ? 'Vào' : 'Ra'}</td><td>${nhanCC(y.trang_thai)}</td>
+      <td class="mo nho">${y.trong_vung ? '' : cachKm(y.cach_m) + ' · '}${c.esc(y.ly_do || '')}</td><td>${y.co_anh ? `<a href="#" data-cc-anh2="${y.id}" data-nhan="${c.esc(x.ten)} · ${y.ngay} ${y.gio}">ảnh</a>` : ''}</td></tr>`).join('')}</table>` : '<div class="mo">Chưa có lượt chấm.</div>'}</div>`;
+    document.querySelectorAll('[data-cc-anh2]').forEach((b) => (b.onclick = (ev) => { ev.preventDefault(); c.chay(() => xemAnhCC(c, Number(b.dataset.ccAnh2), b.dataset.nhan)); }));
+    c.$('#cc-chi-tiet').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  })));
 }

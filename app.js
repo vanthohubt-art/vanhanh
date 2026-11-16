@@ -2,10 +2,10 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261116c';
-import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261116c';
+import * as kho from './kho.js?v=20261116d';
+import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261116d';
 import { psTuSo, ghiChuSo } from './goi-gom.js?v=20261111e';
-import * as mr from './mo-rong.js?v=20261116c';
+import * as mr from './mo-rong.js?v=20261116d';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
@@ -48,6 +48,7 @@ const ICON = {
   sao: '<path d="m12 3 2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z"/>',
   tui: '<path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
   gui: '<path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/>',
+  gio: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
 };
 const ic = (k) => `<svg viewBox="0 0 24 24">${ICON[k] || ''}</svg>`;
 
@@ -56,6 +57,7 @@ const ic = (k) => `<svg viewBox="0 0 24 24">${ICON[k] || ''}</svg>`;
 const MENU = [
   { tt: '', ten: 'Trang chủ', ic: 'nha' },
   { tt: 'toi', ten: 'Việc của tôi', ic: 'ca' },
+  { tt: 'cham-cong', ten: 'Chấm công', ic: 'gio' },
   { tt: 'tim', ten: 'Tìm khách', ic: 'tim' },
   { tt: 'ke-hoach', ten: 'Kế hoạch tháng', ic: 'dich', tien: true },
   { nhom: 'Bán hàng' },
@@ -802,6 +804,7 @@ async function dieuHuong() {
     else if (p0 === 'chat-luong') await mr.trangChatLuong(ctx(), p1 || undefined);
     else if (p0 === 'chi') await mr.trangChi(ctx(), p1 || undefined);
     else if (p0 === 'dang-bai') await mr.trangDangBai(ctx());
+    else if (p0 === 'cham-cong') await mr.trangChamCong(ctx(), p1 || undefined);
     else if (p0 === 'bang-luong') await mr.trangBangLuong(ctx(), p1 || undefined);
     else if (p0 === 'hoa-hong') await mr.trangHoaHong(ctx(), p1 || undefined);
     else if (p0 === 'kpi') await mr.trangKpi(ctx(), p1 || undefined);
