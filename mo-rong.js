@@ -633,7 +633,7 @@ export async function trangKhach(c, id) {
       <div>
         <div class="the"><h2>Các lần chụp</h2>
           ${r.hop_dong.map((h) => `<a class="the-ca vien-tt${h.trang_thai}" href="#/ca/${h.id}" style="display:block;margin-bottom:8px">
-            <div class="hang-nut"><b>${ngay(h.ngay)}</b>${h.ngay_cu ? '<span class="mo">(lịch cũ)</span>' : ''}<span class="nhan tt${h.trang_thai}">${h.trang_thai}. ${c.esc(h.tt_ten)}</span>
+            <div class="hang-nut"><b>${ngay(h.ngay)}</b>${h.ngay_cu ? '<span class="mo">(lịch cũ)</span>' : ''}<span class="nhan tt${h.trang_thai}${h.trang_thai === 5 ? ' ttgap' : ''}">${h.trang_thai}. ${c.esc(h.tt_ten)}</span>
               <span class="mo" style="margin-left:auto">${c.esc(h.ma)}</span></div>
             <div class="mo" style="margin-top:4px">${c.esc(h.goi)}${c.coTien() ? ' · ' + c.tien(h.tong) + (Number(h.con_lai) ? ` · <b style="color:var(--do)">còn ${c.tien(h.con_lai)}</b>` : '') : ''}${h.so_cu ? ' · sổ cũ' : ''}</div></a>`).join('') || '<div class="mo">Chưa có hợp đồng.</div>'}
         </div>

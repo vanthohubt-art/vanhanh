@@ -2,10 +2,10 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261114g';
+import * as kho from './kho.js?v=20261116b';
 import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261114g';
 import { psTuSo, ghiChuSo } from './goi-gom.js?v=20261111e';
-import * as mr from './mo-rong.js?v=20261114e';
+import * as mr from './mo-rong.js?v=20261116b';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
@@ -93,7 +93,8 @@ function bao(s, loi) {
   document.body.appendChild(b); setTimeout(() => b.remove(), loi ? 4500 : 2200);
 }
 async function chay(fn) { try { await fn(); } catch (e) { console.error(e); bao(e.message || String(e), true); } }
-const nhanTT = (so, ten) => `<span class="nhan tt${so}">${so}. ${esc(ten)}</span>`;
+// 5 = Khách đã chọn ảnh (046): việc PTS cần làm ngay ⇒ lớp ttgap nổi bật.
+const nhanTT = (so, ten) => `<span class="nhan tt${so}${so === 5 ? ' ttgap' : ''}">${so}. ${esc(ten)}</span>`;
 const tenTT = (so) => DM.trangThai.find((t) => t.so === so)?.ten || '';
 // Nút gọi là <span>, KHÔNG phải <a>: nó nằm trong thẻ ca vốn là <a>, mà trình duyệt không cho <a> lồng <a> —
 // gặp là tự đóng thẻ ngoài và đẩy nửa sau thẻ ca ra ngoài (đụng 09/11: thẻ lịch mất cả trạng thái lẫn ekip).
@@ -393,7 +394,7 @@ async function trangCa(id) {
         <div id="huy-hd"></div>
         <div class="the">
           <h2>Đổi trạng thái</h2>
-          <div class="ds-tt">${DM.trangThai.filter((t) => t.so !== 9 || h.trang_thai === 9).map((t) => `<button data-tt="${t.so}" class="tt${t.so} ${t.so === h.trang_thai ? 'dang' : ''}">${t.so}. ${esc(t.ten)}</button>`).join('')}</div>
+          <div class="ds-tt">${DM.trangThai.filter((t) => t.so !== 9 || h.trang_thai === 9).map((t) => `<button data-tt="${t.so}" class="tt${t.so}${t.so === 5 ? ' ttgap' : ''} ${t.so === h.trang_thai ? 'dang' : ''}">${t.so}. ${esc(t.ten)}</button>`).join('')}</div>
           <div class="hai" style="margin-top:12px">
             <label>Ngày chụp<input id="ngay" type="date" value="${h.ngay_chup || ''}"></label>
             <label>Giờ chụp<input id="gio" type="time" step="900" value="${h.gio_chup || ''}"></label>
