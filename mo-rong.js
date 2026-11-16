@@ -216,12 +216,12 @@ export async function trangHanGiao(c) {
   const datHen = c.coTien();   // chủ / sale online — hẹn trả ảnh là lời hứa với khách
   const [r, thieu, cu] = await Promise.all([c.kho.ham('crm_han_giao', { p_tu: tu, p_den: den }), datHen ? c.kho.ham('crm_thieu_hen', {}) : [],
     c.laChu() ? c.kho.ham('crm_ca_cu_mo', { p_ai: c.toi }) : null]);
-  const tre = r.ca.filter((x) => x.con_ngay < 0 && x.trang_thai < 8);
+  const tre = r.ca.filter((x) => x.con_ngay < 0 && x.trang_thai < 9);
   const dh = r.dung_han;
-  c.trang.innerHTML = c.dauTrang('Chụp & hậu kỳ', 'Hạn giao ảnh', 'Lịch hẹn trả ảnh 14 ngày tới và các ca đã quá hẹn. Chuyển ca sang "8. Hoàn thành" là máy ghi ngày trả thật để đo đúng hạn.') + `
+  c.trang.innerHTML = c.dauTrang('Chụp & hậu kỳ', 'Hạn giao ảnh', 'Lịch hẹn trả ảnh 14 ngày tới và các ca đã quá hẹn. Chuyển ca sang "9. Ảnh in đã trả" là máy ghi ngày trả thật để đo đúng hạn.') + `
     <div class="so-lieu bon">
       ${c.theSo('#/han-giao', 'canh', ['var(--do-nhat)', 'var(--do)'], 'Quá hẹn trả ảnh', tre.length, tre.length ? 'xử lý trước tiên' : 'không ca nào trễ')}
-      ${c.theSo('#/han-giao', 'lich', ['var(--vang-nhat)', '#8A5A00'], 'Đến hạn trong 2 ngày', r.ca.filter((x) => x.con_ngay >= 0 && x.con_ngay <= 2 && x.trang_thai < 8).length, 'chuẩn bị giao')}
+      ${c.theSo('#/han-giao', 'lich', ['var(--vang-nhat)', '#8A5A00'], 'Đến hạn trong 2 ngày', r.ca.filter((x) => x.con_ngay >= 0 && x.con_ngay <= 2 && x.trang_thai < 9).length, 'chuẩn bị giao')}
       ${c.theSo('#/chat-luong', 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Trả đúng hạn (60 ngày)', dh.so ? Math.round((100 * dh.dung) / dh.so) + '%' : '—', dh.so ? `${dh.dung}/${dh.so} ca` : 'đo từ 09/11/2026 — chưa có ca trả')}
       ${c.theSo('#/chat-luong', 'may', ['var(--tt8n)', 'var(--tt8c)'], 'Chụp → trả ảnh trung bình', dh.tb_ngay != null ? dh.tb_ngay + ' ngày' : '—', 'cam kết 7–10 ngày')}
     </div>
@@ -264,10 +264,10 @@ function theCaCu(c, cu) {
     <td style="text-align:right">${c.tien(x.con_lai > 0 ? x.con_lai : x.tong_hoa_don)}</td></tr>`;
   return `<div class="the" id="ca-cu">
     <div class="dau-the"><h2>Ca sổ cũ còn mở · ${cu.tong} ca</h2></div>
-    <p class="mo" style="margin:0 0 10px">Sổ Sheet không ghi tiến độ nên khi nhập máy đoán trạng thái theo ngày chụp — ca giao từ lâu vẫn treo ở "Đã chụp", "Chờ in/giao"… và làm nhiễu hậu kỳ, việc của tôi. Ca còn nợ <b>không</b> đóng.</p>
+    <p class="mo" style="margin:0 0 10px">Sổ Sheet không ghi tiến độ nên khi nhập máy đoán trạng thái theo ngày chụp — ca giao từ lâu vẫn treo ở "Đã chụp", "Xuất in"… và làm nhiễu hậu kỳ, việc của tôi. Ca còn nợ <b>không</b> đóng.</p>
     ${cu.dong_duoc.length ? `<p style="margin:0 0 8px"><b>${cu.dong_duoc.length} ca</b> chụp quá 45 ngày (hoặc sổ không ghi ngày), <b>đã thu đủ</b>: ${Object.entries(nhom).map(([k, v]) => `${c.esc(k)} ${v}`).join(' · ')}.</p>
       <details style="margin:0 0 10px"><summary class="mo">Xem danh sách</summary><div style="overflow-x:auto;max-height:420px"><table><tr><th>Khách</th><th>Gói</th><th>Chụp</th><th>Đang ở</th><th style="text-align:right">Tổng</th></tr>${cu.dong_duoc.map(dong).join('')}</table></div></details>
-      <button class="nut" id="cc-dong">Chuyển ${cu.dong_duoc.length} ca sang "8. Hoàn thành"</button> <span class="mo">— hẹn trả ảnh giữ nguyên, hoàn tác được</span>` : ''}
+      <button class="nut" id="cc-dong">Chuyển ${cu.dong_duoc.length} ca sang "9. Ảnh in đã trả"</button> <span class="mo">— hẹn trả ảnh giữ nguyên, hoàn tác được</span>` : ''}
     ${cu.con_no.length ? `<h3 style="margin:16px 0 6px">Còn nợ · ${cu.con_no.length} ca · ${c.tien(cu.con_no.reduce((s, x) => s + Number(x.con_lai), 0))}</h3>
       <p class="mo" style="margin:0 0 8px">Nợ thật thì nhắc khách; sổ quên ghi đã thu thì mở ca ghi phiếu thu rồi đóng tay.</p>
       <details><summary class="mo">Xem danh sách</summary><div style="overflow-x:auto;max-height:420px"><table><tr><th>Khách</th><th>Gói</th><th>Chụp</th><th>Đang ở</th><th style="text-align:right">Còn nợ</th></tr>${cu.con_no.map(dong).join('')}</table></div></details>` : ''}
@@ -278,7 +278,7 @@ function theCaCu(c, cu) {
 function ganCaCu(c, cu) {
   const nut = c.$('#cc-dong');
   if (nut) nut.onclick = () => c.chay(async () => {
-    if (!confirm(`Chuyển ${cu.dong_duoc.length} ca sổ cũ sang "8. Hoàn thành"?\nCa còn nợ không bị đụng. Hoàn tác được.`)) return;
+    if (!confirm(`Chuyển ${cu.dong_duoc.length} ca sổ cũ sang "9. Ảnh in đã trả"?\nCa còn nợ không bị đụng. Hoàn tác được.`)) return;
     const kq = await c.kho.ham('crm_dong_ca_cu', { p_ids: cu.dong_duoc.map((x) => x.id), p_ai: c.toi });
     c.bao(`Đã đóng ${kq.so} ca` + (kq.bo_qua ? ` · bỏ qua ${kq.bo_qua} ca vừa đổi` : '')); trangHanGiao(c);
   });
@@ -353,14 +353,14 @@ export async function trangCskh(c) {
   document.querySelectorAll('[data-dg]').forEach((b) => (b.onclick = () => moDanhGia(c, Number(b.dataset.dg), () => trangCskh(c))));
 }
 // ═════════ CHỜ KHÁCH LẤY ẢNH (025) ═════════
-// Mọi ca đang "7. Chờ in / giao", kể cả ca cũ — các màn khác chỉ xét 45–90 ngày nên khách lâu chưa lấy không ai nhắc.
+// Mọi ca đang "8. Xuất in", kể cả ca cũ — các màn khác chỉ xét 45–90 ngày nên khách lâu chưa lấy không ai nhắc.
 const NHOM_CHO = [['Trong 30 ngày', (x) => x.cho_ngay != null && x.cho_ngay <= 30], ['1–3 tháng', (x) => x.cho_ngay > 30 && x.cho_ngay <= 90],
   ['3–12 tháng', (x) => x.cho_ngay > 90 && x.cho_ngay <= 365], ['Hơn 1 năm', (x) => x.cho_ngay > 365], ['Sổ không ghi ngày chụp', (x) => x.cho_ngay == null]];
 export async function trangChoLay(c, loc = '') {
   const ds = await c.kho.ham('crm_cho_lay_anh', {});
   const chuaNhac = ds.filter((x) => !x.nhac_gan_day).length, no = ds.filter((x) => Number(x.con_lai) > 0);
   const hien = loc === 'no' ? no : loc === 'chua-nhac' ? ds.filter((x) => !x.nhac_gan_day) : ds;
-  c.trang.innerHTML = c.dauTrang('Sau chụp', 'Chờ khách lấy ảnh', 'Mọi ca đang ở "7. Chờ in / giao" — ảnh in xong, khách chưa đến lấy. Gọi/Zalo nhắc rồi bấm <b>Đã nhắc</b> (ghi khách nói gì); khách đến lấy thì bấm <b>Đã lấy</b> — còn nợ thì ghi phiếu thu trước.') + `
+  c.trang.innerHTML = c.dauTrang('Sau chụp', 'Chờ khách lấy ảnh', 'Mọi ca đang ở "8. Xuất in" — ảnh in xong, khách chưa đến lấy. Gọi/Zalo nhắc rồi bấm <b>Đã nhắc</b> (ghi khách nói gì); khách đến lấy thì bấm <b>Đã lấy</b> — còn nợ thì ghi phiếu thu trước.') + `
     <div class="the" style="padding:12px 14px">
       <a class="chip ${!loc ? 'chon' : ''}" href="#/cho-lay">Tất cả <span class="so">${ds.length}</span></a>
       <a class="chip ${loc === 'chua-nhac' ? 'chon' : ''}" href="#/cho-lay/chua-nhac">Chưa nhắc 7 ngày qua <span class="so">${chuaNhac}</span></a>
@@ -388,9 +388,9 @@ export async function trangChoLay(c, loc = '') {
   }));
   c.trang.querySelectorAll('[data-lay]').forEach((b) => (b.onclick = () => c.chay(async () => {
     if (Number(b.dataset.no) > 0) { c.bao('Khách còn nợ ' + c.tien(b.dataset.no) + ' — mở ca ghi phiếu thu trước', true); location.hash = '#/ca/' + b.dataset.lay; return; }
-    if (!confirm('Khách đã đến lấy ảnh in? Ca chuyển sang "8. Hoàn thành".')) return;
+    if (!confirm('Khách đã đến lấy ảnh in? Ca chuyển sang "9. Ảnh in đã trả".')) return;
     await c.kho.ham('crm_khach_da_lay', { p_id: Number(b.dataset.lay), p_ai: c.toi });
-    c.bao('Đã chuyển sang Hoàn thành'); trangChoLay(c, loc);
+    c.bao('Đã chuyển sang Ảnh in đã trả'); trangChoLay(c, loc);
   })));
 }
 
@@ -566,9 +566,9 @@ async function veAlbum(c, h, al, el, veLai) {
 // Đã huỷ ⇒ thẻ xám đầu hồ sơ (lý do, ngày cũ, giữ lại/hoàn) + "Mở lại". Chưa huỷ ⇒ nút nhỏ "Huỷ hợp đồng" (chỉ sale online/chủ).
 export async function veHuy(c, h, o, xong) {
   if (!o) return;
-  if (h.trang_thai === 9) {
+  if (h.trang_thai === 10) {
     const t = await c.kho.ham('crm_thong_tin_huy', { p_id: h.id });
-    o.innerHTML = `<div class="the" style="border-color:var(--tt9c);background:var(--tt9n)">
+    o.innerHTML = `<div class="the" style="border-color:var(--tt10c);background:var(--tt10n)">
       <h2 style="margin-top:0">Hợp đồng đã huỷ${t?.luc ? ' · ' + t.luc : ''}</h2>
       <p style="margin:0 0 6px"><b>Lý do:</b> ${c.esc(t?.ly_do || '—')}</p>
       <p class="mo" style="margin:0">${t?.ngay_chup_cu ? 'Lịch cũ: ' + c.ngayVN(t.ngay_chup_cu) + '/' + t.ngay_chup_cu.slice(0, 4) + ' · ' : ''}Studio giữ lại ${c.tien(t?.giu_lai)}${Number(t?.hoan) ? ' · đã hoàn khách ' + c.tien(t.hoan) : ''}</p>
@@ -580,13 +580,13 @@ export async function veHuy(c, h, o, xong) {
     });
     return;
   }
-  if (!c.coTien() || h.trang_thai === 8) return;
+  if (!c.coTien() || h.trang_thai === 9) return;
   const daThu = Number(h.tien?.da_thu || 0);
   o.innerHTML = `<div style="text-align:right;margin:-4px 0 8px"><a href="#" class="mo" id="nut-huy">Khách huỷ? · Huỷ hợp đồng</a></div>`;
   o.querySelector('#nut-huy').onclick = (e) => {
     e.preventDefault();
     const hp = hop(c, 'Huỷ hợp đồng ' + h.ma, `
-      ${h.trang_thai >= 3 ? '<p style="color:var(--do);margin:0 0 8px">Ca đã chụp — chỉ anh Thọ huỷ được.</p>' : ''}
+      ${h.trang_thai >= 2 ? '<p style="color:var(--do);margin:0 0 8px">Ca đã chụp — chỉ anh Thọ huỷ được.</p>' : ''}
       <label>Lý do huỷ (bắt buộc)<input id="h-ly" placeholder="Khách đổi ý · trùng lịch · bé ốm · chuyển sang studio khác…"></label>
       <label style="margin-top:8px">Hoàn cọc cho khách (đã thu ${c.tien(daThu)})<input id="h-hoan" type="number" step="1000" min="0" max="${daThu}" value="0"></label>
       <p class="mo" style="margin:6px 0 0">Không hoàn thì để 0 — số giữ lại tính vào doanh thu. Ca rời lịch; ngày cũ được lưu để mở lại nếu khách quay lại.</p>
@@ -633,7 +633,7 @@ export async function trangKhach(c, id) {
       <div>
         <div class="the"><h2>Các lần chụp</h2>
           ${r.hop_dong.map((h) => `<a class="the-ca vien-tt${h.trang_thai}" href="#/ca/${h.id}" style="display:block;margin-bottom:8px">
-            <div class="hang-nut"><b>${ngay(h.ngay)}</b>${h.ngay_cu ? '<span class="mo">(lịch cũ)</span>' : ''}<span class="nhan tt${h.trang_thai}${h.trang_thai === 5 ? ' ttgap' : ''}">${h.trang_thai}. ${c.esc(h.tt_ten)}</span>
+            <div class="hang-nut"><b>${ngay(h.ngay)}</b>${h.ngay_cu ? '<span class="mo">(lịch cũ)</span>' : ''}<span class="nhan tt${h.trang_thai}${h.trang_thai === 4 ? ' ttgap' : ''}">${h.trang_thai}. ${c.esc(h.tt_ten)}</span>
               <span class="mo" style="margin-left:auto">${c.esc(h.ma)}</span></div>
             <div class="mo" style="margin-top:4px">${c.esc(h.goi)}${c.coTien() ? ' · ' + c.tien(h.tong) + (Number(h.con_lai) ? ` · <b style="color:var(--do)">còn ${c.tien(h.con_lai)}</b>` : '') : ''}${h.so_cu ? ' · sổ cũ' : ''}</div></a>`).join('') || '<div class="mo">Chưa có hợp đồng.</div>'}
         </div>
@@ -654,7 +654,7 @@ export async function trangKhach(c, id) {
 // Gói · giá · giảm · sale online · tên/SĐT/địa chỉ khách. Chỉ gửi lên ô THẬT SỰ đổi; máy chủ chặn lại lần nữa.
 export function moSuaHd(c, h, chonGoiHtml, xong) {
   const soCu = !!h.ma_cu, sale = c.DM.nhanSu.filter((n) => n.vai.includes('sale_online') || n.vai.includes('chu'));
-  const khoaTien = soCu || h.trang_thai === 9 || (h.trang_thai === 8 && !c.laChu());
+  const khoaTien = soCu || h.trang_thai === 10 || (h.trang_thai === 9 && !c.laChu());
   const hp = hop(c, 'Sửa hợp đồng ' + h.ma, `
     <h3 style="margin:0 0 6px">Khách</h3>
     <div class="hai"><label>Tên khách<input id="s-ten" value="${c.esc(h.khach || '')}"></label>
@@ -663,7 +663,7 @@ export function moSuaHd(c, h, chonGoiHtml, xong) {
     <p class="mo nho" style="margin:4px 0 12px">Sửa ở đây là sửa hồ sơ khách — mọi hợp đồng của khách này cùng đổi.</p>
     <h3 style="margin:0 0 6px">Gói & giá</h3>
     ${soCu ? '<p class="mo" style="margin:0 0 6px">Ca nhập từ sổ Sheet — đổi gói/giá trên sổ, tối máy đối chiếu sẽ cập nhật.</p>'
-      : khoaTien && h.trang_thai === 8 ? '<p class="mo" style="margin:0 0 6px">Ca đã hoàn thành — chỉ anh Thọ sửa giá.</p>' : ''}
+      : khoaTien && h.trang_thai === 9 ? '<p class="mo" style="margin:0 0 6px">Ca đã trả ảnh in — chỉ anh Thọ sửa giá.</p>' : ''}
     <label>Gói<select id="s-goi" ${khoaTien ? 'disabled' : ''}>${chonGoiHtml(h.goi_ma)}</select></label>
     <div class="hai" style="margin-top:8px"><label>Giá gói<input id="s-gia" type="number" min="0" step="1000" value="${h.gia_goi ?? ''}" ${khoaTien ? 'disabled' : ''}></label>
       <label>Giảm giá<input id="s-giam" type="number" min="0" step="1000" value="${h.giam_gia || 0}" ${khoaTien ? 'disabled' : ''}></label></div>
@@ -842,7 +842,7 @@ export async function trangCuaToi(c) {
     <div class="so-lieu bon">
       ${c.theSo('#/toi', 'canh', ['var(--do-nhat)', 'var(--do)'], 'Việc gấp', gap, 'trễ hẹn hoặc khách đòi sửa')}
       ${c.theSo('#/toi', 'ca', ['var(--nhan-nhat)', 'var(--nhan-dam)'], 'Việc đang chờ bạn', v.viec.length, Object.keys(theoKhau).map((k) => TEN_VAI_TOI[k] || k).join(' · ') || '—')}
-      ${c.theSo('#/lich', 'lich', ['var(--tt8n)', 'var(--tt8c)'], 'Ca của bạn tháng này', v.thang.so, v.thang.xong + ' ca đã hoàn thành')}
+      ${c.theSo('#/lich', 'lich', ['var(--tt8n)', 'var(--tt8c)'], 'Ca của bạn tháng này', v.thang.so, v.thang.xong + ' ca đã trả ảnh')}
       ${c.theSo('#/hoa-hong', 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Hoa hồng tạm tính', minh ? (minh.nhan_hoa_hong ? c.tien(minh.tong) : 'lương cố định') : '—', 'tháng này, theo ekip từng ca')}
     </div>
     <div class="hai-cot">
@@ -937,7 +937,7 @@ export async function trangKpi(c, thangChon) {
     </div>` : ''}
     <div class="luoi-ca" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr))">${r.nguoi.map(the).join('') || '<div class="trong">Chưa có ca nào có tên bạn trong tháng này.</div>'}</div>
     <div class="the mo">Cách đo: <b>doanh số sale</b> = tổng hoá đơn các HĐ mình là sale online · <b>bán thêm</b> = phát sinh của ca mình tick sale tại studio (chia đều khi nhiều người) ·
-      <b>đánh giá</b> = điểm khách chấm ở màn Chất lượng dịch vụ · <b>trả ảnh đúng hẹn</b> = ngày chuyển "Hoàn thành" so với hẹn trả ảnh, chỉ ca có đủ hai mốc ·
+      <b>đánh giá</b> = điểm khách chấm ở màn Chất lượng dịch vụ · <b>trả ảnh đúng hẹn</b> = ngày chuyển "Ảnh in đã trả" so với hẹn trả ảnh, chỉ ca có đủ hai mốc ·
       <b>hoa hồng</b> = đúng số của màn Lương & hoa hồng.</div>`;
 }
 

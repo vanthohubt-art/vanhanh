@@ -2,10 +2,10 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261116b';
-import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261114g';
+import * as kho from './kho.js?v=20261116c';
+import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261116c';
 import { psTuSo, ghiChuSo } from './goi-gom.js?v=20261111e';
-import * as mr from './mo-rong.js?v=20261116b';
+import * as mr from './mo-rong.js?v=20261116c';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
@@ -94,7 +94,7 @@ function bao(s, loi) {
 }
 async function chay(fn) { try { await fn(); } catch (e) { console.error(e); bao(e.message || String(e), true); } }
 // 5 = Khách đã chọn ảnh (046): việc PTS cần làm ngay ⇒ lớp ttgap nổi bật.
-const nhanTT = (so, ten) => `<span class="nhan tt${so}${so === 5 ? ' ttgap' : ''}">${so}. ${esc(ten)}</span>`;
+const nhanTT = (so, ten) => `<span class="nhan tt${so}${so === 4 ? ' ttgap' : ''}">${so}. ${esc(ten)}</span>`;
 const tenTT = (so) => DM.trangThai.find((t) => t.so === so)?.ten || '';
 // Nút gọi là <span>, KHÔNG phải <a>: nó nằm trong thẻ ca vốn là <a>, mà trình duyệt không cho <a> lồng <a> —
 // gặp là tự đóng thẻ ngoài và đẩy nửa sau thẻ ca ra ngoài (đụng 09/11: thẻ lịch mất cả trạng thái lẫn ekip).
@@ -148,7 +148,7 @@ async function trangChu() {
       ${theSo('#/tim', 'hd', ['var(--tt6n)', 'var(--tt6c)'], 'Hợp đồng mới trong tháng', tc.hd_moi.so, trieu(tc.hd_moi.tien))}
       ${theSo('#/cong-no', 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Thực thu trong tháng', trieu(tc.thuc_thu.tien), tc.thuc_thu.so + ' phiếu thu')}
       ${theSo('#/cong-no', 'canh', ['var(--do-nhat)', 'var(--do)'], 'Công nợ cần thu', trieu(tc.cong_no.tien), tc.cong_no.so + ' hợp đồng')}
-      ${theSo('#/lich/' + tc.hom_nay + '/thang', 'lich', ['var(--tt8n)', 'var(--tt8c)'], 'Ca chụp trong tháng', tc.ca_thang.so, tc.ca_thang.xong + ' ca đã hoàn thành')}
+      ${theSo('#/lich/' + tc.hom_nay + '/thang', 'lich', ['var(--tt8n)', 'var(--tt8c)'], 'Ca chụp trong tháng', tc.ca_thang.so, tc.ca_thang.xong + ' ca đã trả ảnh')}
       ${theSo('#/', 'ca', ['var(--nhan-nhat)', 'var(--nhan-dam)'], 'Việc đang chờ cả đội', tongViec, tc.gap ? `<span style="color:var(--do);font-weight:700">${tc.gap} việc gấp</span>` : 'không có việc gấp')}
     </div>
     <div id="dc-dem"></div>
@@ -162,7 +162,7 @@ async function trangChu() {
             <span><span class="ten">${esc(c.khach)}</span><br><span class="phu">${esc(c.goi)} · ${c.ekip.length ? c.ekip.map((e) => esc(e.ten)).join(', ') : '<b style="color:var(--do)">chưa xếp ekip</b>'}</span></span>
             <span style="text-align:right">${nhanTT(c.trang_thai, c.trang_thai_ten)}${c.con_lai ? `<br><span class="phu" style="color:var(--do)">còn ${tien(c.con_lai)}</span>` : ''}</span>
           </a>`).join('') : '<div class="trong">Hôm nay không có ca chụp.</div>'}
-        ${tc.ca_cu_mo ? `<div class="canh" style="margin:12px 0 0">${ic('canh')} <b>${tc.ca_cu_mo} ca cũ</b> (chụp hơn 45 ngày trước) chưa hoàn thành — nhiều nhà <b>chưa đến lấy ảnh in</b>. <a href="#/cho-lay">Xem danh sách chờ khách lấy ảnh</a>.</div>` : ''}
+        ${tc.ca_cu_mo ? `<div class="canh" style="margin:12px 0 0">${ic('canh')} <b>${tc.ca_cu_mo} ca cũ</b> (chụp hơn 45 ngày trước) chưa trả ảnh — nhiều nhà <b>chưa đến lấy ảnh in</b>. <a href="#/cho-lay">Xem danh sách chờ khách lấy ảnh</a>.</div>` : ''}
       </div>
       <div>
         <div class="dau-the"><div><div class="nhan-nho" style="font-weight:700;color:var(--nhan);font-size:11px">CÔNG VIỆC CẦN XỬ LÝ</div><h2>${tongViec} việc đang chờ</h2></div>
@@ -373,16 +373,16 @@ async function trangCa(id) {
     const ph = await kho.ham('crm_phieu_huy', { p_id: id }), goc = new Set(ph.map((x) => x.goc)), dao = new Set(ph.map((x) => x.dao));
     h.phieuThu.forEach((p) => { p.huy = goc.has(p.id); p.dao = dao.has(p.id); });
   } catch { /* máy chủ chưa có 027 */ }
-  const huyDuoc = (p) => coTien() && h.trang_thai !== 9 && !p.huy && !p.dao && !(p.ghi_chu || '').startsWith('Cột "Đặt cọc/Thanh toán" của sổ cũ') && p.ghi_chu !== 'Hoàn cọc khi huỷ hợp đồng';
+  const huyDuoc = (p) => coTien() && h.trang_thai !== 10 && !p.huy && !p.dao && !(p.ghi_chu || '').startsWith('Cột "Đặt cọc/Thanh toán" của sổ cũ') && p.ghi_chu !== 'Hoàn cọc khi huỷ hợp đồng';
   const cos = [...new Set(DM.giaIn.map((g) => g.co))];
-  const quaHen = h.hen_tra_anh && h.hen_tra_anh < homNay() && h.trang_thai < 8;
+  const quaHen = h.hen_tra_anh && h.hen_tra_anh < homNay() && h.trang_thai < 9;
   $('#trang').innerHTML = `
     <div class="mo" style="margin-bottom:10px"><a href="javascript:history.back()">‹ Quay lại</a></div>
     <div class="the dau-ca">
       <div class="hang-nut" style="align-items:flex-end;gap:14px">
         <span class="gio-lon">${h.gio_chup || '--:--'}</span>
         <span class="mo">${h.ngay_chup ? `${THU_DAI[thuCua(h.ngay_chup)]}, ${ngayVN(h.ngay_chup)}/${h.ngay_chup.slice(0, 4)}` : 'Chưa có ngày chụp'}</span>
-        <span class="mo" style="margin-left:auto">Hợp đồng <b>${h.ma}</b></span>${coTien() && h.trang_thai !== 9 ? '<button class="nut phu nho" id="sua-hd">Sửa</button>' : ''}
+        <span class="mo" style="margin-left:auto">Hợp đồng <b>${h.ma}</b></span>${coTien() && h.trang_thai !== 10 ? '<button class="nut phu nho" id="sua-hd">Sửa</button>' : ''}
       </div>
       <h1 style="margin:8px 0 4px"><a href="#/khach/${h.khach_id}" style="color:inherit" title="Hồ sơ khách — mọi lần chụp">${esc(h.khach)}</a></h1>
       <div class="hang-nut">${nhanTT(h.trang_thai, h.trang_thai_ten)} <span class="nhan">${esc(h.goi_ten)}</span> ${NGUON[h.nguon] ? `<span class="nhan">${NGUON[h.nguon]}</span>` : ''}
@@ -394,7 +394,7 @@ async function trangCa(id) {
         <div id="huy-hd"></div>
         <div class="the">
           <h2>Đổi trạng thái</h2>
-          <div class="ds-tt">${DM.trangThai.filter((t) => t.so !== 9 || h.trang_thai === 9).map((t) => `<button data-tt="${t.so}" class="tt${t.so}${t.so === 5 ? ' ttgap' : ''} ${t.so === h.trang_thai ? 'dang' : ''}">${t.so}. ${esc(t.ten)}</button>`).join('')}</div>
+          <div class="ds-tt">${DM.trangThai.filter((t) => t.so !== 10 || h.trang_thai === 10).map((t) => `<button data-tt="${t.so}" class="tt${t.so}${t.so === 4 ? ' ttgap' : ''} ${t.so === h.trang_thai ? 'dang' : ''}">${t.so}. ${esc(t.ten)}</button>`).join('')}</div>
           <div class="hai" style="margin-top:12px">
             <label>Ngày chụp<input id="ngay" type="date" value="${h.ngay_chup || ''}"></label>
             <label>Giờ chụp<input id="gio" type="time" step="900" value="${h.gio_chup || ''}"></label>
@@ -620,7 +620,7 @@ const VAI_NGAY = ['chup', 'stylist', 'makeup', 'sale_offline'];
 const VAI_TAT = { chup: 'C', stylist: 'S', makeup: 'M', sale_offline: 'B' };
 async function veLichEkip(dau) {
   const ngays = [0, 1, 2, 3, 4, 5, 6].map((i) => congNgay(dau, i));
-  const ca = (await kho.lich(dau, ngays[6])).filter((c) => c.trang_thai !== 9);
+  const ca = (await kho.lich(dau, ngays[6])).filter((c) => c.trang_thai !== 10);
   const phut = (g) => (g ? Number(g.slice(0, 2)) * 60 + Number(g.slice(3, 5)) : null);
   const nguoi = new Map();
   for (const c of ca) for (const e of c.ekip) {
@@ -664,7 +664,7 @@ async function veLichEkip(dau) {
 // ═════════ HẬU KỲ ═════════
 async function trangHauKy() {
   const r = await kho.hauKy();
-  const cot = [3, 4, 5, 6, 7];
+  const cot = [2, 3, 4, 5, 6, 7, 8];   // 047: từ Đã chụp tới Xuất in
   const han = (c) => c.con_ngay == null ? '' : c.con_ngay < 0 ? `<span class="nhan do">trễ ${-c.con_ngay} ngày</span>` : c.con_ngay <= 2 ? `<span class="nhan vang">còn ${c.con_ngay} ngày</span>` : `<span class="nhan">hạn ${ngayVN(c.hen_tra_anh)}</span>`;
   const tre = r.ca.filter((c) => c.con_ngay != null && c.con_ngay < 0).length;
   $('#trang').innerHTML = dauTrang('Chụp & hậu kỳ', 'Hậu kỳ & hạn giao ảnh', `${r.ca.length} ca đang trong khâu hậu kỳ (chụp trong 90 ngày)${tre ? ` · <b style="color:var(--do)">${tre} ca quá hẹn</b>` : ''}. Bấm một ca để đổi trạng thái.`) + `

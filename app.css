@@ -210,7 +210,14 @@ td.so, th.so { text-align: right; white-space: nowrap; font-variant-numeric: tab
 /* 027: cặp phiếu thu gõ nhầm / phiếu huỷ */
 tr.phieu-huy td { text-decoration: line-through; opacity: .6; }
 tr.phieu-huy td a, tr.phieu-huy td b { text-decoration: none; }
-/* 046 — trạng thái 5 "Khách đã chọn ảnh": việc cần làm ngay, nổi bật cả sáng lẫn tối */
+/* 046/047 — trạng thái 4 "Khách đã chọn ảnh" (047 đổi số 5 → 4): việc cần làm ngay, nổi bật cả sáng lẫn tối */
 .nhan.ttgap, .ds-tt button.ttgap { background: #D32F2F; color: #fff; border-left-color: #7F0000; font-weight: 700; box-shadow: 0 0 0 2px rgba(211,47,47,.25); }
 .ds-tt button.ttgap.dang { outline: 3px solid #FFB300; outline-offset: 1px; }
-.vien-tt5 { border-left: 6px solid #D32F2F !important; background: linear-gradient(90deg, rgba(211,47,47,.10), transparent 55%); }
+.vien-tt4 { border-left: 6px solid #D32F2F !important; background: linear-gradient(90deg, rgba(211,47,47,.10), transparent 55%); }
+/* 047 — 10 trạng thái: 9 = Ảnh in đã trả (xong, xanh lá), 10 = Đã huỷ (xám, gạch ngang) */
+:root { --tt9n: #DFF2E6; --tt9c: #14532D; --tt10n: #ECECEC; --tt10c: #6B6B6B; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --tt9n: #16301F; --tt9c: #86D9A5; --tt10n: #2A2A2A; --tt10c: #A8A8A8; } }
+:root[data-theme="dark"] { --tt9n: #16301F; --tt9c: #86D9A5; --tt10n: #2A2A2A; --tt10c: #A8A8A8; }
+.tt9 { text-decoration: none; } .tt10 { background: var(--tt10n); color: var(--tt10c); text-decoration: line-through; }
+.vien-tt9 { opacity: 1; } .vien-tt10 { border-left-color: var(--tt10c); opacity: .7; }
+.bang-cot { grid-template-columns: repeat(7, minmax(220px, 1fr)); }

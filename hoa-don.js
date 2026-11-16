@@ -106,7 +106,7 @@ export async function veHoaDon(h) {
     const buoi = [
       `Ngày chụp: ${h.ngay_chup ? ngayDu(h.ngay_chup) + (h.gio_chup ? ' · ' + String(h.gio_chup).slice(0, 5) : '') : 'sẽ hẹn sau'}`,
       h.sale_online ? `Tư vấn: ${h.sale_online}` : '',
-      h.hen_tra_anh && h.trang_thai < 8 ? `Nhận ảnh dự kiến: ${ngayDu(h.hen_tra_anh)}` : '',
+      h.hen_tra_anh && h.trang_thai < 9 ? `Nhận ảnh dự kiến: ${ngayDu(h.hen_tra_anh)}` : '',
     ].filter(Boolean);
     const cao = 70 + Math.max(khach.length, buoi.length) * 34;
     hop(LE, y, R - LE, cao, MAU.nen);
