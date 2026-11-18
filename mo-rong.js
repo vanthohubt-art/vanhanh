@@ -1353,7 +1353,9 @@ export async function trangChamCong(c, thangChon) {
         <div class="mo nho" id="cc-dat-tt" style="margin-top:6px">Bấm bằng <b>điện thoại</b> khi đang đứng trong studio — máy tính không có GPS. Nên đặt bán kính 100–200 m.</div></div>`;
   }
   c.trang.innerHTML = c.dauTrang('Nhân sự', 'Chấm công', `${tenThang} · vào ca / ra ca bằng vị trí + ảnh selfie.`, nav)
-    + (t.la_chu ? `<div class="hai-cot"><div>${chu}</div><div>${bang}</div></div>` : `<div class="hai-cot"><div>${ban}${ganDay}</div><div>${bang}</div></div>`);
+    + (t.la_chu ? `<div class="hai-cot"><div>${chu}</div><div>${bang}</div></div>`
+      : me.khong_cham_cong ? `<div class="the trong">Tài khoản của bạn không cần chấm công — anh Thọ đã tắt.</div>`
+      : `<div class="hai-cot"><div>${ban}${ganDay}</div><div>${bang}</div></div>`);
   const lai = () => trangChamCong(c, thang);
   if (c.$('#cc-bam')) c.$('#cc-bam').onclick = () => moChamCong(c, me.dang_trong_ca ? 'ra' : 'vao', me, lai);
   document.querySelectorAll('[data-cc-anh]').forEach((b) => (b.onclick = () => c.chay(() => xemAnhCC(c, Number(b.dataset.ccAnh), b.dataset.nhan))));
