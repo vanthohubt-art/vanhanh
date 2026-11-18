@@ -1161,7 +1161,7 @@ export async function trangBangLuong(c, thangChon) {
       <div class="hai">
         <label>Ngày công (ăn trưa)${(() => { const k = cc?.nguoi.find((z) => z.id === x.id); return k && (k.ngay_cong || k.cho_duyet) ? ` <span class="mo nho">· chấm online: <b>${k.ngay_cong}</b> công${k.cho_duyet ? `, ${k.cho_duyet} lượt chờ duyệt` : ''}${r.chot ? '' : ` <a href="#" id="bl-lay-cc" data-so="${k.ngay_cong}">điền số này</a>`}</span>` : ''; })()}<input id="bl-nc" inputmode="decimal" value="${x.ngay_cong ?? ''}" ${khoa}></label>
         <label>Tăng ca trong giờ (giờ, âm = thiếu giờ)<input id="bl-t1" inputmode="decimal" value="${x.tc_trong || ''}" ${khoa}></label>
-        <label>Tăng ca ngoài giờ (giờ)<input id="bl-t2" inputmode="decimal" value="${x.tc_ngoai || ''}" ${khoa}></label>
+        <label>Tăng ca ngoài giờ (giờ)${(() => { const k = cc?.nguoi.find((z) => z.id === x.id); return k && Number(k.tc_gio) ? ` <span class="mo nho">· chấm online: <b>${so(k.tc_gio)}h</b> (${k.tc_ngay} ngày quá ${cc.gio_lam?.tc_toi_thieu_phut ?? 30}p)${r.chot ? '' : ` <a href="#" id="bl-lay-tc" data-so="${k.tc_gio}">điền số này</a>`}</span>` : ''; })()}<input id="bl-t2" inputmode="decimal" value="${x.tc_ngoai || ''}" ${khoa}></label>
         ${muc.map((m) => `<label>${c.esc(m.ten)} <span class="mo nho">× ${c.tien(m.don_gia)}</span><input data-muc="${m.ma}" inputmode="decimal" value="${x.muc?.[m.ma] ?? ''}" placeholder="0" ${khoa}></label>`).join('')}
         <label>Thưởng khác (đồng)<input id="bl-th" inputmode="numeric" value="${x.thuong || ''}" ${khoa}></label>
         <label>Phạt (đồng)<input id="bl-ph" inputmode="numeric" value="${x.phat || ''}" ${khoa}></label>
@@ -1172,6 +1172,7 @@ export async function trangBangLuong(c, thangChon) {
       ${r.chot ? '' : '<div class="hang-nut" style="margin-top:10px"><button class="nut nho" id="bl-luu">Lưu</button></div>'}</div>`;
     if (r.chot) return;
     if (c.$('#bl-lay-cc')) c.$('#bl-lay-cc').onclick = (e) => { e.preventDefault(); c.$('#bl-nc').value = e.target.dataset.so; };
+    if (c.$('#bl-lay-tc')) c.$('#bl-lay-tc').onclick = (e) => { e.preventDefault(); c.$('#bl-t2').value = e.target.dataset.so; };
     c.$('#bl-luu').onclick = () => c.chay(async () => {
       const m = {}; document.querySelectorAll('[data-muc]').forEach((i) => { const v = soNhap(i.value); if (v) m[i.dataset.muc] = Number(v); });
       await c.kho.ham('crm_luu_bang_luong', { p_thang: thang + '-01', d: { nhan_su_id: x.id, ngay_cong: soNhap(c.$('#bl-nc').value), tc_trong: soNhap(c.$('#bl-t1').value),
@@ -1323,12 +1324,14 @@ export async function trangChamCong(c, thangChon) {
     </div>`;
   const ganDay = `<div class="the"><h2>7 ngày gần đây của tôi</h2>${me.gan_day.length ? `<table>${me.gan_day.map((x) => `<tr><td>${x.ngay} ${x.gio}</td><td>${x.loai === 'vao' ? 'Vào' : 'Ra'}</td><td>${nhanCC(x.trang_thai)}</td><td class="mo nho">${x.trong_vung ? '' : cachKm(x.cach_m)}${x.ly_do ? ' · ' + c.esc(x.ly_do) : ''}</td></tr>`).join('')}</table>` : '<div class="mo">Chưa chấm lần nào.</div>'}</div>`;
   const nav = `<a class="nut phu nho" href="#/cham-cong/${doiThang(-1)}">‹ Tháng trước</a> <a class="nut phu nho" href="#/cham-cong/${doiThang(1)}">Tháng sau ›</a>`;
-  const bang = `<div class="the cuon-ngang"><h2>Bảng công ${tenThang}</h2><table style="min-width:520px">
-      <tr><th>Nhân viên</th><th class="so">Ngày công</th><th class="so">Giờ làm</th><th class="so">Chờ duyệt</th><th class="so">Quên ra ca</th><th class="so">Máy chung</th></tr>
+  const bang = `<div class="the cuon-ngang"><h2>Bảng công ${tenThang}</h2><table style="min-width:600px">
+      <tr><th>Nhân viên</th><th class="so">Ngày công</th><th class="so">Giờ làm</th><th class="so">Tăng ca</th><th class="so">Chờ duyệt</th><th class="so">Quên ra ca</th><th class="so">Máy chung</th></tr>
       ${t.nguoi.map((x) => `<tr><td><a href="#" data-cc-ng="${x.id}"><b>${c.esc(x.ten)}</b></a></td><td class="so">${x.ngay_cong}</td><td class="so">${so(x.gio)}</td>
+        <td class="so">${Number(x.tc_gio) ? `${so(x.tc_gio)}h <span class="mo nho">${x.tc_ngay} ngày</span>` : ''}</td>
         <td class="so">${x.cho_duyet ? `<span class="nhan vang">${x.cho_duyet}</span>` : ''}</td><td class="so">${x.quen_ra ? `<span class="nhan do">${x.quen_ra}</span>` : ''}</td>
         <td class="so">${x.may_chung ? `<span class="nhan do">${x.may_chung}</span>` : ''}</td></tr>`).join('')}
-    </table><div class="mo nho" style="margin-top:6px">Ngày công = ngày có cặp Vào → Ra cùng ngày, cả hai tại studio hoặc đã duyệt, dài không quá 14 giờ. Quên ra ca ⇒ ngày đó chưa tính công tới khi anh ghi giờ ra hộ.</div></div>
+    </table><div class="mo nho" style="margin-top:6px">Ngày công = ngày có cặp Vào → Ra cùng ngày, cả hai tại studio hoặc đã duyệt, dài không quá 14 giờ. Quên ra ca ⇒ ngày đó chưa tính công tới khi anh ghi giờ ra hộ.
+      Tăng ca = phút làm trước ${t.gio_lam?.vao || '08:00'} hoặc sau ${t.gio_lam?.ra || '18:00'} (nghỉ trưa không tính); ngày nào quá ${t.gio_lam?.tc_toi_thieu_phut ?? 30} phút mới tính, từ ${t.gio_lam?.tc_toi_thieu_phut ?? 30} phút trở xuống bỏ qua.</div></div>
     <div id="cc-chi-tiet"></div>`;
   let chu = '';
   if (t.la_chu) {
@@ -1350,7 +1353,12 @@ export async function trangChamCong(c, thangChon) {
         <div class="mo">${d.lat != null ? `Đã đặt: ${Number(d.lat).toFixed(5)}, ${Number(d.lng).toFixed(5)} · <a href="https://www.google.com/maps?q=${d.lat},${d.lng}" target="_blank" rel="noopener">xem bản đồ</a>${d.sua_boi ? ` · ${c.esc(d.sua_boi)} đặt` : ''}` : '<b>Chưa đặt.</b> Đứng trong studio rồi bấm nút dưới.'}</div>
         <div class="hai" style="margin-top:8px"><label>Bán kính (m)<input id="cc-bk" inputmode="numeric" value="${d.ban_kinh_m || 150}"></label></div>
         <div class="hang-nut" style="margin-top:8px"><button class="nut nho" id="cc-dat">Đặt = chỗ tôi đang đứng</button> <button class="nut phu nho" id="cc-luu-bk">Chỉ lưu bán kính</button></div>
-        <div class="mo nho" id="cc-dat-tt" style="margin-top:6px">Bấm bằng <b>điện thoại</b> khi đang đứng trong studio — máy tính không có GPS. Nên đặt bán kính 100–200 m.</div></div>`;
+        <div class="mo nho" id="cc-dat-tt" style="margin-top:6px">Bấm bằng <b>điện thoại</b> khi đang đứng trong studio — máy tính không có GPS. Nên đặt bán kính 100–200 m.</div></div>
+      <div class="the"><h2>Giờ làm & tăng ca</h2>
+        <div class="hai"><label>Giờ vào<input id="cc-gv" type="time" value="${t.gio_lam?.vao || '08:00'}"></label><label>Giờ ra<input id="cc-gr" type="time" value="${t.gio_lam?.ra || '18:00'}"></label>
+          <label>Tính tăng ca khi quá (phút)<input id="cc-tcp" inputmode="numeric" value="${t.gio_lam?.tc_toi_thieu_phut ?? 30}"></label></div>
+        <div class="hang-nut" style="margin-top:8px"><button class="nut nho" id="cc-luu-gio">Lưu giờ làm</button></div>
+        <div class="mo nho" style="margin-top:6px">Làm trước giờ vào / sau giờ ra quá số phút này trong ngày ⇒ cả phần đó là tăng ca (ra 18:45 = 45 phút). Từ số phút đó trở xuống ⇒ không tính. Nghỉ trưa không tính.</div></div>`;
   }
   c.trang.innerHTML = c.dauTrang('Nhân sự', 'Chấm công', `${tenThang} · vào ca / ra ca bằng vị trí + ảnh selfie.`, nav)
     + (t.la_chu ? `<div class="hai-cot"><div>${chu}</div><div>${bang}</div></div>`
@@ -1373,13 +1381,16 @@ export async function trangChamCong(c, thangChon) {
     const gio = document.querySelector(`[data-ra-gio="${b.dataset.raHo}"]`).value.trim().replace(/^(\d{1,2})[h.](\d{2})$/, '$1:$2');
     await c.kho.ham('crm_ghi_ra_ho', { p_vao_id: Number(b.dataset.raHo), p_gio: gio, p_ai: c.toi }); c.bao('Đã ghi giờ ra ' + gio); lai();
   })));
+  if (c.$('#cc-luu-gio')) c.$('#cc-luu-gio').onclick = () => c.chay(async () => {
+    await c.kho.ham('crm_dat_gio_lam', { d: { vao: c.$('#cc-gv').value, ra: c.$('#cc-gr').value, tc_toi_thieu_phut: c.$('#cc-tcp').value.replace(/\D/g, '') }, p_ai: c.toi }); c.bao('Đã lưu giờ làm'); lai();
+  });
   if (c.$('#cc-luu-bk')) c.$('#cc-luu-bk').onclick = () => c.chay(async () => { await c.kho.ham('crm_dat_dia_diem', { d: { ban_kinh_m: bk() }, p_ai: c.toi }); c.bao('Đã lưu bán kính'); lai(); });
   document.querySelectorAll('[data-cc-ng]').forEach((a) => (a.onclick = (e) => c.chay(async () => {
     e.preventDefault(); const x = t.nguoi.find((y) => String(y.id) === a.dataset.ccNg);
     const ds = await c.kho.ham('crm_cham_cong_nguoi', { p_ns: x.id, p_thang: thang + '-01', p_ai: c.toi });
     c.$('#cc-chi-tiet').innerHTML = `<div class="the"><div class="dau-the"><h2>${c.esc(x.ten)} · ${tenThang}</h2>${t.la_chu && ds.some((y) => y.co_anh) ? '<button class="nut phu nho phai" id="cc-luoi">Soát ảnh cả tháng</button>' : ''}</div>
       ${ds.length ? `<table>${ds.map((y) => `<tr><td>${y.ngay} ${y.gio}</td><td>${y.loai === 'vao' ? 'Vào' : 'Ra'}</td><td>${nhanCC(y.trang_thai)}</td>
-      <td class="mo nho">${y.trong_vung || (y.co || []).includes('ghi_ho') ? '' : cachKm(y.cach_m) + ' · '}${c.esc(y.ly_do || '')} ${COC(y.co)}</td><td>${y.co_anh ? `<a href="#" data-cc-anh2="${y.id}" data-nhan="${c.esc(x.ten)} · ${y.ngay} ${y.gio}">ảnh</a>` : ''}</td></tr>`).join('')}</table>` : '<div class="mo">Chưa có lượt chấm.</div>'}</div>`;
+      <td class="mo nho">${y.trong_vung || (y.co || []).includes('ghi_ho') ? '' : cachKm(y.cach_m) + ' · '}${c.esc(y.ly_do || '')} ${COC(y.co)}</td><td>${y.co_anh ? `<a href="#" data-cc-anh2="${y.id}" data-nhan="${c.esc(x.ten)} · ${y.ngay} ${y.gio}">ảnh</a>` : ''}</td></tr>`).join('')}</table>` : '<div class="mo">Chưa có lượt chấm.</div>'}${(() => { const d = (x.ngay || []).filter((y) => y.tc_phut > 0); return d.length ? `<div class="mo nho" style="margin-top:8px">Ngoài giờ: ${d.map((y) => `${y.ngay} ${y.tc ? `<b>${y.tc}p tăng ca</b>` : `${y.tc_phut}p (chưa đủ)`}`).join(' · ')}</div>` : ''; })()}</div>`;
     document.querySelectorAll('[data-cc-anh2]').forEach((b) => (b.onclick = (ev) => { ev.preventDefault(); c.chay(() => xemAnhCC(c, Number(b.dataset.ccAnh2), b.dataset.nhan)); }));
     if (c.$('#cc-luoi')) c.$('#cc-luoi').onclick = () => c.chay(() => luoiAnhCC(c, x, thang, tenThang));
     c.$('#cc-chi-tiet').scrollIntoView({ behavior: 'smooth', block: 'start' });
