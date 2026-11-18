@@ -2,10 +2,10 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261118f';
-import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261118f';
+import * as kho from './kho.js?v=20261118g';
+import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261118g';
 import { psTuSo, ghiChuSo } from './goi-gom.js?v=20261111e';
-import * as mr from './mo-rong.js?v=20261118f';
+import * as mr from './mo-rong.js?v=20261118g';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
@@ -77,11 +77,12 @@ const MENU = [
   { tt: 'cho-lay', ten: 'Chờ khách lấy ảnh', ic: 'qua' },
   { tt: 'chat-luong', ten: 'Chất lượng dịch vụ', ic: 'sao' },
   { nhom: 'Thu chi' },
-  { tt: 'cong-no', ten: 'Công nợ & thu tiền', ic: 'vi', tien: true },
-  { tt: 'chi', ten: 'Chi cửa hàng', ic: 'tui', tien: true },
-  { tt: 'bang-luong', ten: 'Bảng lương tháng', ic: 'tien' },
-  { tt: 'hoa-hong', ten: 'Hoa hồng chi tiết', ic: 'tien' },
-  { tt: 'kpi', ten: 'KPI nhân viên', ic: 'sao' },
+  // 055 (18/11): cả nhóm Thu chi CHỈ CHỦ — anh Thọ: "chỉ tôi biết, Sale cũng không được biết". Máy chủ cũng chặn.
+  { tt: 'cong-no', ten: 'Công nợ & thu tiền', ic: 'vi', chu: true },
+  { tt: 'chi', ten: 'Chi cửa hàng', ic: 'tui', chu: true },
+  { tt: 'bang-luong', ten: 'Bảng lương tháng', ic: 'tien', chu: true },
+  { tt: 'hoa-hong', ten: 'Hoa hồng chi tiết', ic: 'tien', chu: true },
+  { tt: 'kpi', ten: 'KPI nhân viên', ic: 'sao', chu: true },
   { tt: 'lai-lo', ten: 'Lãi lỗ tháng', ic: 'dich', chu: true },
   { nhom: 'Marketing' },
   { tt: 'dang-bai', ten: 'Đăng bài Facebook', ic: 'gui' },
@@ -147,9 +148,9 @@ async function trangChu() {
   $('#trang').innerHTML = dauTrang(`Trung tâm điều hành · ${THU_DAI[thuCua(tc.hom_nay)]}, ${ngayVN(tc.hom_nay)}/${tc.hom_nay.slice(0, 4)}`, `Tổng quan tháng ${thang}`,
     'Một màn hình để cả đội biết hôm nay cần làm gì.', (coTien() ? `<a class="nut" href="#/moi">${ic('hd')} Lên hợp đồng</a> ` : '') + '<a class="nut phu" href="#/toi">Việc của tôi</a>') + `
     <div class="so-lieu">
-      ${theSo('#/tim', 'hd', ['var(--tt6n)', 'var(--tt6c)'], 'Hợp đồng mới trong tháng', tc.hd_moi.so, trieu(tc.hd_moi.tien))}
-      ${theSo('#/cong-no', 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Thực thu trong tháng', trieu(tc.thuc_thu.tien), tc.thuc_thu.so + ' phiếu thu')}
-      ${theSo('#/cong-no', 'canh', ['var(--do-nhat)', 'var(--do)'], 'Công nợ cần thu', trieu(tc.cong_no.tien), tc.cong_no.so + ' hợp đồng')}
+      ${theSo('#/tim', 'hd', ['var(--tt6n)', 'var(--tt6c)'], 'Hợp đồng mới trong tháng', tc.hd_moi.so, laChu() ? trieu(tc.hd_moi.tien) : 'trong tháng')}
+      ${laChu() ? theSo('#/cong-no', 'tien', ['var(--xanh-nhat)', 'var(--xanh)'], 'Thực thu trong tháng', trieu(tc.thuc_thu.tien), tc.thuc_thu.so + ' phiếu thu') : ''}
+      ${laChu() ? theSo('#/cong-no', 'canh', ['var(--do-nhat)', 'var(--do)'], 'Công nợ cần thu', trieu(tc.cong_no.tien), tc.cong_no.so + ' hợp đồng') : ''}
       ${theSo('#/lich/' + tc.hom_nay + '/thang', 'lich', ['var(--tt8n)', 'var(--tt8c)'], 'Ca chụp trong tháng', tc.ca_thang.so, tc.ca_thang.xong + ' ca đã trả ảnh')}
       ${theSo('#/', 'ca', ['var(--nhan-nhat)', 'var(--nhan-dam)'], 'Việc đang chờ cả đội', tongViec, tc.gap ? `<span style="color:var(--do);font-weight:700">${tc.gap} việc gấp</span>` : 'không có việc gấp')}
     </div>
@@ -250,10 +251,14 @@ async function trangTim(q0 = '') {
 }
 
 // ═════════ LÊN HỢP ĐỒNG ═════════
-function chonGoiHtml(chon) {
+// tuDien: thêm lựa chọn "Gói linh động" (056). tenChon: gói riêng của hợp đồng (không nằm trong bảng giá) vẫn hiện đúng tên.
+function chonGoiHtml(chon, tenChon = '', tuDien = false) {
   const nhom = {};
   for (const g of DM.goi) (nhom[g.hang_muc_ten] = nhom[g.hang_muc_ten] || []).push(g);
-  return '<option value="">— Chọn gói —</option>' + Object.entries(nhom).map(([hm, ds]) =>
+  return '<option value="">— Chọn gói —</option>'
+    + (tuDien ? '<option value="__TU_DIEN">✎ Gói linh động — tự điền (ngoài bảng giá)</option>' : '')
+    + (chon && !DM.goi.some((g) => g.ma === chon) ? `<option value="${esc(chon)}" selected>${esc(tenChon || chon)} (gói riêng)</option>` : '')
+    + Object.entries(nhom).map(([hm, ds]) =>
     `<optgroup label="${esc(hm)}">${ds.map((g) => `<option value="${g.ma}" ${g.ma === chon ? 'selected' : ''}>${esc(g.ten)} — ${tien(g.gia_ban)}</option>`).join('')}</optgroup>`).join('');
 }
 function ekipHtml(chon = []) {
@@ -288,8 +293,15 @@ async function trangMoi(ngayGoiY = '') {
             <label>Bằng chứng nguồn<input id="nguon-bc" placeholder="Câu khách nói, nhãn quảng cáo… — đừng đoán"></label></div>
         </div>
         <div class="the"><h2>Gói và lịch</h2>
-          <label>Gói *<select id="goi">${chonGoiHtml()}</select></label>
+          <label>Gói *<select id="goi">${chonGoiHtml('', '', true)}</select></label>
           <div id="goi-mo" class="mo" style="margin:6px 0 10px"></div>
+          <div id="td" hidden style="margin:0 0 10px;padding:10px;border:1px dashed var(--vien, #ccc);border-radius:10px">
+            <div class="hai"><label>Hạng mục *<select id="td-hm"><option value="">— Chọn —</option>${DM.hangMuc.map((h) => `<option value="${h.ma}">${esc(h.ten)}</option>`).join('')}</select></label>
+              <label>Số ảnh sửa<input id="td-anh" type="number" min="0" step="1" placeholder="vd 20"></label></div>
+            <label style="margin-top:8px">Tên gói *<input id="td-ten" maxlength="80" placeholder="vd Gia đình 3 thế hệ + bé 1 tuổi"></label>
+            <label style="margin-top:8px">Nội dung gói<textarea id="td-nd" rows="3" placeholder="Bối cảnh, số trang phục, quà in, ảnh tặng… — ekip đọc cái này để chuẩn bị"></textarea></label>
+            <p class="mo nho" style="margin:6px 0 0">Điền giá gói ở ô bên dưới. Gói này chỉ dùng cho hợp đồng này, không thêm vào bảng giá.</p>
+          </div>
           <div class="hai">
             <label>Giá gói<input id="gia" type="number" min="0" step="1000"></label>
             <label>Giảm giá<input id="giam" type="number" min="0" step="1000" value="0"></label>
@@ -334,6 +346,8 @@ async function trangMoi(ngayGoiY = '') {
     if (khachMoi.sdt) $('#sdt').onblur();
   }
   $('#goi').onchange = () => {
+    $('#td').hidden = $('#goi').value !== '__TU_DIEN';
+    if (!$('#td').hidden) { $('#gia').value = ''; $('#goi-mo').innerHTML = ''; $('#td-ten').focus(); return; }
     const g = DM.goi.find((x) => x.ma === $('#goi').value);
     $('#gia').value = g ? g.gia_ban : '';
     $('#goi-mo').innerHTML = g ? [g.so_boi_canh, g.so_anh_sua ? g.so_anh_sua + ' ảnh sửa' : '', g.qua_in_co ? `in ${g.qua_in_co}` : '', g.qua_checkin ? `tặng ${g.qua_checkin} khi check-in` : '', g.noi_dung].filter(Boolean).map(esc).join(' · ') : '';
@@ -354,7 +368,10 @@ async function trangMoi(ngayGoiY = '') {
     try {
       const h = await kho.taoHopDong({
         sdt: $('#sdt').value, ten: $('#ten').value, nguon: $('#nguon').value, nguon_bang_chung: $('#nguon-bc').value.trim(),
-        goi_ma: $('#goi').value, gia_goi: $('#gia').value, giam_gia: $('#giam').value, ngay_chup: $('#ngay').value, gio_chup: $('#gio').value,
+        ...($('#goi').value === '__TU_DIEN'
+          ? { goi_ma: '', goi_tu_dien: { hang_muc: $('#td-hm').value, ten: $('#td-ten').value.trim(), so_anh_sua: $('#td-anh').value, noi_dung: $('#td-nd').value.trim() } }
+          : { goi_ma: $('#goi').value }),
+        gia_goi: $('#gia').value, giam_gia: $('#giam').value, ngay_chup: $('#ngay').value, gio_chup: $('#gio').value,
         sale_online_id: $('#sale').value ? Number($('#sale').value) : null, ekip: docEkip($('#ekip')),
         coc: $('#coc').value, hinh_thuc_coc: $('#htcoc').value, ngay_coc: $('#ngaycoc').value, ghi_chu: $('#ghi').value.trim(),
       }, toi);
@@ -771,8 +788,11 @@ async function trangSanPham() {
 
 // ═════════ KHUNG ═════════
 function veMenu() {
-  $('#menu').innerHTML = MENU.map((m) => m.nhom ? `<div class="nhom-menu">${m.nhom}</div>`
-    : ((m.tien && !coTien()) || (m.chu && !laChu())) ? '' : `<a href="#/${m.tt}" data-trang="${m.tt}">${ic(m.ic)}<span>${m.ten}</span>${m.tt === '' ? '<span class="dem" id="dem-gap" hidden></span>' : ''}</a>`).join('');
+  const an = (m) => (m.tien && !coTien()) || (m.chu && !laChu());
+  // Nhóm mà mọi mục đều bị ẩn (vd Thu chi với nhân viên) thì ẩn luôn tiêu đề nhóm.
+  const nhomTrong = (i) => { for (let j = i + 1; j < MENU.length && !MENU[j].nhom; j++) if (!an(MENU[j])) return false; return true; };
+  $('#menu').innerHTML = MENU.map((m, i) => m.nhom ? (nhomTrong(i) ? '' : `<div class="nhom-menu">${m.nhom}</div>`)
+    : an(m) ? '' : `<a href="#/${m.tt}" data-trang="${m.tt}">${ic(m.ic)}<span>${m.ten}</span>${m.tt === '' ? '<span class="dem" id="dem-gap" hidden></span>' : ''}</a>`).join('');
 }
 async function dieuHuong() {
   const h = location.hash.replace(/^#\/?/, ''), [p0, p1, p2] = h.split('/');
@@ -784,6 +804,7 @@ async function dieuHuong() {
   document.body.classList.remove('mo-menu');
   window.scrollTo(0, 0);
   await chay(async () => {
+    if (MENU.some((x) => x.chu && x.tt === p0) && !laChu()) { $('#trang').innerHTML = dauTrang('Thu chi', m ? m.ten : 'Thu chi', 'Mục này chỉ anh Thọ xem.'); return; }
     if (p0 === 'mat-khau' && kho.THAT) trangMatKhau();
     else if (p0 === 'moi') await trangMoi(p1 || '');
     else if (p0 === 'lich') await trangLich(p1 || homNay(), p2 || 'ngay');

@@ -664,7 +664,7 @@ export function moSuaHd(c, h, chonGoiHtml, xong) {
     <h3 style="margin:0 0 6px">Gói & giá</h3>
     ${soCu ? '<p class="mo" style="margin:0 0 6px">Ca nhập từ sổ Sheet — đổi gói/giá trên sổ, tối máy đối chiếu sẽ cập nhật.</p>'
       : khoaTien && h.trang_thai === 9 ? '<p class="mo" style="margin:0 0 6px">Ca đã trả ảnh in — chỉ anh Thọ sửa giá.</p>' : ''}
-    <label>Gói<select id="s-goi" ${khoaTien ? 'disabled' : ''}>${chonGoiHtml(h.goi_ma)}</select></label>
+    <label>Gói<select id="s-goi" ${khoaTien ? 'disabled' : ''}>${chonGoiHtml(h.goi_ma, h.goi_ten)}</select></label>
     <div class="hai" style="margin-top:8px"><label>Giá gói<input id="s-gia" type="number" min="0" step="1000" value="${h.gia_goi ?? ''}" ${khoaTien ? 'disabled' : ''}></label>
       <label>Giảm giá<input id="s-giam" type="number" min="0" step="1000" value="${h.giam_gia || 0}" ${khoaTien ? 'disabled' : ''}></label></div>
     <label style="margin-top:8px">Sale chốt (online)<select id="s-sale" ${c.laChu() ? '' : 'disabled'}><option value="">—</option>${sale.map((n) => `<option value="${n.id}" ${n.id === h.sale_online_id ? 'selected' : ''}>${c.esc(n.ten)}</option>`).join('')}</select></label>
