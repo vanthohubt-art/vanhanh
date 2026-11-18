@@ -1306,8 +1306,16 @@ async function luoiAnhCC(c, x, thang, tenThang) {
 async function xemAnhCC(c, id, nhan) {
   const a = await c.kho.ham('crm_cham_cong_anh', { p_id: id, p_ai: c.toi });
   const nen = hopNen(`<div class="dau-the"><h2>${c.esc(nhan)}</h2><button class="nut phu nho phai" data-dong>Đóng</button></div>
-    ${a ? `<img src="${a}" alt="Ảnh chấm công">` : '<div class="the trong">Ảnh đã xoá (quá 120 ngày) hoặc không có.</div>'}`, 380);
+    ${a ? `<img src="${a}" alt="Ảnh chấm công"><div class="hang-nut" style="margin-top:8px"><button class="nut nho" data-tai>Tải ảnh về máy</button></div>` : '<div class="the trong">Ảnh đã xoá (quá 120 ngày) hoặc không có.</div>'}`, 380);
   nen.onclick = (e) => { if (e.target === nen) nen.remove(); }; nen.querySelector('[data-dong]').onclick = () => nen.remove();
+  // Tải về: đổi data URL thành Blob rồi bấm link ẩn — điện thoại (iOS/Android) nhận chắc hơn data URL dài.
+  const tai = nen.querySelector('[data-tai]');
+  if (tai) tai.onclick = async () => {
+    const b = await (await fetch(a)).blob(); const u = URL.createObjectURL(b);
+    const ten = 'cham-cong-' + String(nhan).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() + '.jpg';
+    const l = document.createElement('a'); l.href = u; l.download = ten; document.body.appendChild(l); l.click(); l.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 10000);
+  };
 }
 export async function trangChamCong(c, thangChon) {
   const thang = /^\d{4}-\d{2}$/.test(thangChon || '') ? thangChon : c.homNay().slice(0, 7);
@@ -1322,7 +1330,7 @@ export async function trangChamCong(c, thangChon) {
       ${me.ca_cu_chua_ra ? `<div class="canh" style="margin-top:8px">Ca ${c.esc(me.ca_cu_chua_ra)} chưa ra ca — ngày đó CHƯA tính công. Nhắn anh Thọ giờ ra để anh ghi hộ.</div>` : ''}
       <div class="mo nho" style="margin-top:6px">Mỗi người chấm bằng điện thoại của mình — máy đã chấm cho người khác sẽ phải chờ duyệt.</div>
     </div>`;
-  const ganDay = `<div class="the"><h2>7 ngày gần đây của tôi</h2>${me.gan_day.length ? `<table>${me.gan_day.map((x) => `<tr><td>${x.ngay} ${x.gio}</td><td>${x.loai === 'vao' ? 'Vào' : 'Ra'}</td><td>${nhanCC(x.trang_thai)}</td><td class="mo nho">${x.trong_vung ? '' : cachKm(x.cach_m)}${x.ly_do ? ' · ' + c.esc(x.ly_do) : ''}</td></tr>`).join('')}</table>` : '<div class="mo">Chưa chấm lần nào.</div>'}</div>`;
+  const ganDay = `<div class="the"><h2>7 ngày gần đây của tôi</h2>${me.gan_day.length ? `<table>${me.gan_day.map((x) => `<tr><td>${x.ngay} ${x.gio}</td><td>${x.loai === 'vao' ? 'Vào' : 'Ra'}</td><td>${nhanCC(x.trang_thai)}</td><td class="mo nho">${x.trong_vung ? '' : cachKm(x.cach_m)}${x.ly_do ? ' · ' + c.esc(x.ly_do) : ''}</td><td><a href="#" data-cc-anh="${x.id}" data-nhan="${c.esc(me.ten || 'Tôi')} · ${x.ngay} ${x.gio}">ảnh</a></td></tr>`).join('')}</table>` : '<div class="mo">Chưa chấm lần nào.</div>'}</div>`;
   const nav = `<a class="nut phu nho" href="#/cham-cong/${doiThang(-1)}">‹ Tháng trước</a> <a class="nut phu nho" href="#/cham-cong/${doiThang(1)}">Tháng sau ›</a>`;
   const bang = `<div class="the cuon-ngang"><h2>Bảng công ${tenThang}</h2><table style="min-width:600px">
       <tr><th>Nhân viên</th><th class="so">Ngày công</th><th class="so">Giờ làm</th><th class="so">Tăng ca</th><th class="so">Chờ duyệt</th><th class="so">Quên ra ca</th><th class="so">Máy chung</th></tr>
@@ -1367,7 +1375,7 @@ export async function trangChamCong(c, thangChon) {
       : `<div class="hai-cot"><div>${ban}${ganDay}</div><div>${bang}</div></div>`);
   const lai = () => trangChamCong(c, thang);
   if (c.$('#cc-bam')) c.$('#cc-bam').onclick = () => moChamCong(c, me.dang_trong_ca ? 'ra' : 'vao', me, lai);
-  document.querySelectorAll('[data-cc-anh]').forEach((b) => (b.onclick = () => c.chay(() => xemAnhCC(c, Number(b.dataset.ccAnh), b.dataset.nhan))));
+  document.querySelectorAll('[data-cc-anh]').forEach((b) => (b.onclick = (e) => (e.preventDefault(), c.chay(() => xemAnhCC(c, Number(b.dataset.ccAnh), b.dataset.nhan)))));
   const duyet = (id, v) => c.chay(async () => { await c.kho.ham('crm_duyet_cham_cong', { p_id: id, p_duyet: v, p_ai: c.toi }); c.bao(v ? 'Đã duyệt' : 'Đã từ chối'); lai(); });
   document.querySelectorAll('[data-cc-duyet]').forEach((b) => (b.onclick = () => duyet(Number(b.dataset.ccDuyet), true)));
   document.querySelectorAll('[data-cc-tu]').forEach((b) => (b.onclick = () => { if (confirm('Từ chối lượt chấm này? Ngày đó sẽ không tính công.')) duyet(Number(b.dataset.ccTu), false); }));
