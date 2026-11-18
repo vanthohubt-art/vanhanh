@@ -1353,9 +1353,9 @@ export async function trangChamCong(c, thangChon) {
         <div class="mo nho" id="cc-dat-tt" style="margin-top:6px">Bấm bằng <b>điện thoại</b> khi đang đứng trong studio — máy tính không có GPS. Nên đặt bán kính 100–200 m.</div></div>`;
   }
   c.trang.innerHTML = c.dauTrang('Nhân sự', 'Chấm công', `${tenThang} · vào ca / ra ca bằng vị trí + ảnh selfie.`, nav)
-    + `<div class="hai-cot"><div>${ban}${ganDay}</div><div>${chu}${bang}</div></div>`;
+    + (t.la_chu ? `<div class="hai-cot"><div>${chu}</div><div>${bang}</div></div>` : `<div class="hai-cot"><div>${ban}${ganDay}</div><div>${bang}</div></div>`);
   const lai = () => trangChamCong(c, thang);
-  c.$('#cc-bam').onclick = () => moChamCong(c, me.dang_trong_ca ? 'ra' : 'vao', me, lai);
+  if (c.$('#cc-bam')) c.$('#cc-bam').onclick = () => moChamCong(c, me.dang_trong_ca ? 'ra' : 'vao', me, lai);
   document.querySelectorAll('[data-cc-anh]').forEach((b) => (b.onclick = () => c.chay(() => xemAnhCC(c, Number(b.dataset.ccAnh), b.dataset.nhan))));
   const duyet = (id, v) => c.chay(async () => { await c.kho.ham('crm_duyet_cham_cong', { p_id: id, p_duyet: v, p_ai: c.toi }); c.bao(v ? 'Đã duyệt' : 'Đã từ chối'); lai(); });
   document.querySelectorAll('[data-cc-duyet]').forEach((b) => (b.onclick = () => duyet(Number(b.dataset.ccDuyet), true)));
