@@ -2,10 +2,10 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261118g';
+import * as kho from './kho.js?v=20261122a';
 import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261118g';
 import { psTuSo, ghiChuSo } from './goi-gom.js?v=20261111e';
-import * as mr from './mo-rong.js?v=20261118g';
+import * as mr from './mo-rong.js?v=20261122a';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
@@ -73,6 +73,7 @@ const MENU = [
   { tt: 'han-giao', ten: 'Hạn giao ảnh', ic: 'qua' },
   { tt: 'video', ten: 'Video khách', ic: 'video' },
   { nhom: 'Sau chụp' },
+  { tt: 'album', ten: 'Album chọn ảnh', ic: 'anh' },
   { tt: 'cskh', ten: 'Chăm sóc khách', ic: 'tim2' },
   { tt: 'cho-lay', ten: 'Chờ khách lấy ảnh', ic: 'qua' },
   { tt: 'chat-luong', ten: 'Chất lượng dịch vụ', ic: 'sao' },
@@ -817,6 +818,7 @@ async function dieuHuong() {
     else if (p0 === 'ke-hoach') await mr.trangKeHoach(ctx(), p1 || undefined);
     else if (p0 === 'lead') await mr.trangLead(ctx(), p1 || '');
     else if (p0 === 'concept') await mr.trangAnhMau(ctx(), 'concept');
+    else if (p0 === 'album') await (await import('./album.js?v=20261122a')).trangAlbum(ctx());
     else if (p0 === 'makeup') await mr.trangAnhMau(ctx(), 'makeup');
     else if (p0 === 'han-giao') await mr.trangHanGiao(ctx());
     else if (p0 === 'video') await mr.trangVideo(ctx(), p1 || 'can_lam');

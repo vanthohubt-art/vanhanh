@@ -68,6 +68,8 @@ export async function dangNhap(email, matKhau) {
   const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password: matKhau });
   if (error) throw new Error(/Invalid login/i.test(error.message) ? 'Sai email hoặc mật khẩu.' : error.message);
 }
+// Token phiên Supabase — tab Album gửi kèm sang máy chủ album (Apps Script tự hỏi lại Supabase token này là ai).
+export async function tokenCrm() { const { data } = await sb.auth.getSession(); return data.session?.access_token || ''; }
 export async function dangXuat() { await sb.auth.signOut(); }
 export async function doiMatKhau(moi) {
   const { error } = await sb.auth.updateUser({ password: moi });
