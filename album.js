@@ -213,8 +213,16 @@ export async function trangAlbum(c) {
   $('#al-tim-nut').onclick = tim;
   $('#al-tim').onkeydown = (e) => { if (e.key === 'Enter') tim(); };
 
+  // 23/11: khoá nút trong lúc máy chủ tạo (dán link Drive 455 ảnh mất vài giây — bấm lần hai từng ra 2 album).
+  let dangTao = false;
   $('#al-nut-tao').onclick = () => c.chay(async () => {
     if (dangTai) return c.bao('Đang tải ảnh, chờ xong lượt này đã.', true);
+    if (dangTao) return;
+    const nut = $('#al-nut-tao'), chuCu = nut.textContent;
+    dangTao = true; nut.disabled = true; nut.textContent = 'Đang tạo…';
+    try { await taoMot(); } finally { dangTao = false; nut.disabled = false; nut.textContent = chuCu; }
+  });
+  const taoMot = async () => {
     const d = { viec: 'tao', cach: st.cach, khach: $('#al-khach').value.trim(), sdt: $('#al-sdt').value, thangChup: $('#al-thang').value,
       quota: $('#al-quota').value, giaAnhThem: $('#al-gia').value.replace(/\D/g, ''), thuMuc: $('#al-link-drive').value.trim(),
       goi: st.hopDong?.goi || '', hopDong: st.hopDong?.ma || '' };
@@ -226,14 +234,15 @@ export async function trangAlbum(c) {
       catch (e) { c.bao('Album đã tạo nhưng chưa gắn được vào hồ sơ: ' + e.message, true); }
     }
     if (r.canhBao) c.bao(r.canhBao, true);
-    if (st.cach === 'may') {
+    if (r.trung && st.cach === 'may') { c.bao('Album này vừa tạo rồi — muốn thêm ảnh thì bấm "Thêm ảnh gốc" ở album đó.', true); st.tep = []; nhanTep([]); }
+    else if (st.cach === 'may') {
       const tep = st.tep; st.tep = []; nhanTep([]);
       await chayTai(c, r.ma, 'goc', tep, $('#al-tien'), $('#al-tien-chu'));
     } else c.bao('Đã tạo link — ' + r.soAnh + ' ảnh');
     for (const s of ['#al-khach', '#al-sdt', '#al-gia', '#al-link-drive', '#al-tim']) $(s).value = '';
     st.hopDong = null; $('#al-hd').innerHTML = '';
     await napDs(r.ma);
-  });
+  };
 
   // ── lịch + danh sách ──
   const napDs = async (moiTao) => {
