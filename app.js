@@ -2,10 +2,10 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261122a';
+import * as kho from './kho.js?v=20261123a';
 import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261118g';
 import { psTuSo, ghiChuSo } from './goi-gom.js?v=20261111e';
-import * as mr from './mo-rong.js?v=20261122a';
+import * as mr from './mo-rong.js?v=20261123a';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
@@ -170,20 +170,23 @@ async function trangChu() {
       </div>
       <div>
         <div class="dau-the"><div><div class="nhan-nho" style="font-weight:700;color:var(--nhan);font-size:11px">CÔNG VIỆC CẦN XỬ LÝ</div><h2>${tongViec} việc đang chờ</h2></div>
-          <span class="phai mo">Mỗi nhóm hiện 8 việc gấp nhất</span></div>
+          <span class="phai mo">Mỗi nhóm hiện 8 việc gấp nhất · bấm Xem thêm để mở hết</span></div>
         ${Object.entries(BO_PHAN).map(([k, [ten, mo]]) => {
           const ds = theoBP[k] || [];
           const tong = ds.reduce((s, v) => s + v.so, 0);
           return `<div class="bo-phan"><div class="dau-bp"><div><b>${ten}</b><div class="mo nho">${mo}</div></div><span class="tong-bp">${tong}</span></div>
             ${ds.length ? ds.map((v) => `<div class="nhom-viec"><div class="ten-nhom">${v.ten} <span class="nhan ${NHOM_GAP.includes(v.nhom) ? 'do' : ''}">${v.so}</span></div>
-              ${v.ds.map((x) => `<a class="viec ${NHOM_GAP.includes(v.nhom) ? 'gap' : ''}" href="#/ca/${x.id}"><span class="ten">${esc(x.khach)}</span><span class="mo nho">${esc(x.goi)}</span><span class="ly-do">${esc(x.ly_do)}</span></a>`).join('')}
-              ${v.so > v.ds.length ? `<div class="con-nua">… và ${v.so - v.ds.length} việc nữa</div>` : ''}</div>`).join('')
+              ${v.ds.slice(0, 8).map((x) => dongViec(v, x)).join('')}
+              ${v.ds.length > 8 ? `<details class="xem-them"><summary class="con-nua">Xem thêm ${v.ds.length - 8} việc ›</summary>${v.ds.slice(8).map((x) => dongViec(v, x)).join('')}</details>` : ''}${v.so > v.ds.length ? `<div class="con-nua">… và ${v.so - v.ds.length} việc nữa</div>` : ''}</div>`).join('')
               : '<div class="nhom-viec mo">Không có việc chờ ✓</div>'}
           </div>`;
         }).join('')}
       </div>
     </div>`;
 }
+
+// Một dòng việc trên trang chủ (bấm mở hồ sơ ca).
+const dongViec = (v, x) => `<a class="viec ${NHOM_GAP.includes(v.nhom) ? 'gap' : ''}" href="#/ca/${x.id}"><span class="ten">${esc(x.khach)}</span><span class="mo nho">${esc(x.goi)}</span><span class="ly-do">${esc(x.ly_do)}</span></a>`;
 
 function veDaiGap(tc) {
   const d = $('#dai-gap');
@@ -818,7 +821,7 @@ async function dieuHuong() {
     else if (p0 === 'ke-hoach') await mr.trangKeHoach(ctx(), p1 || undefined);
     else if (p0 === 'lead') await mr.trangLead(ctx(), p1 || '');
     else if (p0 === 'concept') await mr.trangAnhMau(ctx(), 'concept');
-    else if (p0 === 'album') await (await import('./album.js?v=20261122a')).trangAlbum(ctx());
+    else if (p0 === 'album') await (await import('./album.js?v=20261123a')).trangAlbum(ctx());
     else if (p0 === 'makeup') await mr.trangAnhMau(ctx(), 'makeup');
     else if (p0 === 'han-giao') await mr.trangHanGiao(ctx());
     else if (p0 === 'video') await mr.trangVideo(ctx(), p1 || 'can_lam');
