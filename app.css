@@ -94,6 +94,8 @@ td.so, th.so { text-align: right; white-space: nowrap; font-variant-numeric: tab
 .goi-nut { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--vien); background: var(--the); text-decoration: none; color: var(--nhan); }
 .sdt { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--vien); border-radius: 9px; padding: 4px 10px; font-weight: 700; font-size: 13px; text-decoration: none; font-variant-numeric: tabular-nums; }
 .sdt svg { width: 14px; height: 14px; color: var(--nhan); }
+.sdt { cursor: pointer; }
+.sdt.goi { color: var(--nhan-dam); font-weight: 600; margin-left: 4px; }
 .trong { border: 1px dashed var(--vien); border-radius: 10px; padding: 12px; color: var(--chu-nhat); font-size: 13px; }
 
 /* ── thẻ số ── */

@@ -2,10 +2,10 @@
 // Menu xếp theo DÒNG CHẢY MỘT KHÁCH: Bán hàng → Chụp & hậu kỳ → Thu chi. Màn hình chỉ gọi kho.js.
 // Học từ chỗ Sky hỏng (output/2026-10-28-phuong-an-web-crm-home-studio mục 1.3): việc mỗi nhóm tối đa 8 dòng,
 // 8 trạng thái đánh số liền, không mục menu rỗng, hoá đơn có tiền thừa.
-import * as kho from './kho.js?v=20261123b';
+import * as kho from './kho.js?v=20261123c';
 import { moHoaDon, moQrThu, PS_SO_CU } from './hoa-don.js?v=20261118g';
 import { psTuSo, ghiChuSo } from './goi-gom.js?v=20261111e';
-import * as mr from './mo-rong.js?v=20261123b';
+import * as mr from './mo-rong.js?v=20261123c';
 import * as kh from './khoang.js?v=20261110b';
 
 const $ = (s, g = document) => g.querySelector(s);
@@ -102,7 +102,10 @@ const nhanTT = (so, ten) => `<span class="nhan tt${so}${so === 4 ? ' ttgap' : ''
 const tenTT = (so) => DM.trangThai.find((t) => t.so === so)?.ten || '';
 // Nút gọi là <span>, KHÔNG phải <a>: nó nằm trong thẻ ca vốn là <a>, mà trình duyệt không cho <a> lồng <a> —
 // gặp là tự đóng thẻ ngoài và đẩy nửa sau thẻ ca ra ngoài (đụng 09/11: thẻ lịch mất cả trạng thái lẫn ekip).
-const sdtHtml = (s) => (s ? `<span class="sdt" role="link" tabindex="0" onclick="event.preventDefault();event.stopPropagation();location.href='tel:${esc(s)}'">${ic('dt')}${esc(s.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3'))}</span>` : '<span class="mo">chưa có SĐT</span>');
+// 23/11/2026 (anh Thọ: 'ấn vào sdt có thể copy được'): bấm SỐ = chép số; gọi thì bấm nút 'Gọi' cạnh bên.
+window.chepSdt = (s) => { const xong = () => bao('Đã chép ' + s); if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(s).then(xong, () => chepCu(s) ? xong() : bao('Không chép được', true)); else chepCu(s) ? xong() : bao('Không chép được', true); };
+function chepCu(s) { const t = Object.assign(document.createElement('textarea'), { value: s }); t.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(t); t.select(); let ok = false; try { ok = document.execCommand('copy'); } catch { /* bỏ qua */ } t.remove(); return ok; }
+const sdtHtml = (s) => (s ? `<span class="sdt" role="button" tabindex="0" title="Bấm để chép số" onclick="event.preventDefault();event.stopPropagation();chepSdt('${esc(s)}')">${ic('dt')}${esc(s.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3'))}</span><span class="sdt goi" role="link" tabindex="0" onclick="event.preventDefault();event.stopPropagation();location.href='tel:${esc(s)}'">Gọi</span>` : '<span class="mo">chưa có SĐT</span>');
 const dauTrang = (nhan, tieuDe, moTa, phai = '') => `<div class="dau-trang"><div><div class="nhan-nho">${nhan}</div><h1>${tieuDe}</h1>${moTa ? `<div class="mo">${moTa}</div>` : ''}</div>${phai ? `<div class="phai">${phai}</div>` : ''}</div>`;
 const theSo = (href, icon, mau, nhan, so, phu) => `<a class="o-so" href="${href}"><span class="bieu" style="background:${mau[0]};color:${mau[1]}">${ic(icon)}</span><span class="chu"><small>${nhan}</small><b>${so}</b><span class="phu">${phu}</span></span></a>`;
 
@@ -821,7 +824,7 @@ async function dieuHuong() {
     else if (p0 === 'ke-hoach') await mr.trangKeHoach(ctx(), p1 || undefined);
     else if (p0 === 'lead') await mr.trangLead(ctx(), p1 || '');
     else if (p0 === 'concept') await mr.trangAnhMau(ctx(), 'concept');
-    else if (p0 === 'album') await (await import('./album.js?v=20261123b')).trangAlbum(ctx());
+    else if (p0 === 'album') await (await import('./album.js?v=20261123c')).trangAlbum(ctx());
     else if (p0 === 'makeup') await mr.trangAnhMau(ctx(), 'makeup');
     else if (p0 === 'han-giao') await mr.trangHanGiao(ctx());
     else if (p0 === 'video') await mr.trangVideo(ctx(), p1 || 'can_lam');
