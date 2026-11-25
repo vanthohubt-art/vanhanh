@@ -821,8 +821,15 @@ export async function trangHoaHong(c, chu) {
 // Nhân viên mở app vào thẳng đây. Chủ xem được qua nút "Việc của tôi" ở Trang chủ.
 // Việc = ca có tên mình đang dừng ở KHÂU CỦA VAI mình (trang_thai.vai_chiu) — máy chủ lọc, không phải ẩn.
 const TEN_VAI_TOI = { chup: 'Chụp', pts: 'PTS', stylist: 'Stylist', makeup: 'Makeup', sale_offline: 'Sale tại studio', sale_online: 'Sale online', chu: 'Duyệt', gioi_thieu: 'Giới thiệu khách' };
-const VIEC_CUA_VAI = { chup: 'Gửi ảnh gốc cho khách', pts: 'Chỉnh ảnh', sale_online: 'Chốt lịch · nhắc chọn ảnh · giao ảnh', chu: 'Duyệt ảnh trước khi giao' };
+// 058 (25/11): PTS giữ ca từ Khách đã chọn ảnh tới Khách đã duyệt; sale thấy MỌI ca đang chạy, chia theo trạng thái.
+const VIEC_CUA_VAI = { chup: 'Gửi ảnh gốc cho khách', pts: 'Chỉnh ảnh · trực sửa tới khi khách duyệt', sale_online: 'Mọi ca đang chạy — từ đặt lịch tới trả ảnh in', chu: 'Duyệt ảnh trước khi giao' };
+const THU_TU_KHAU = ['chu', 'pts', 'chup', 'sale_online'];
 export async function trangCuaToi(c) {
+  const dong = (x) => `<a class="viec ${x.gap ? 'gap' : ''}" href="#/ca/${x.id}"><span class="ten">${c.esc(x.khach)}</span><span class="mo nho">${c.esc(x.goi)} · ${c.esc(x.tt_ten)}</span><span class="ly-do">${c.esc(x.ly_do)}${x.khau === 'sale_online' && x.trang_thai >= 4 && x.trang_thai <= 6 ? ' · ' + (x.pts ? 'PTS: <b>' + c.esc(x.pts) + '</b>' : '<b style="color:var(--do)">chưa giao PTS</b>') : ''}</span></a>`;
+  // Hiện 8 việc đầu, còn lại bấm Xem thêm (như Trang chủ).
+  const dongViecToi = (ds) => ds.slice(0, 8).map(dong).join('') + (ds.length > 8 ? `<details class="xem-them"><summary class="con-nua">Xem thêm ${ds.length - 8} việc ›</summary>${ds.slice(8).map(dong).join('')}</details>` : '');
+  const nhomTheoTT = (ds) => { const g = {}; for (const x of ds) (g[x.trang_thai] ||= []).push(x);
+    return Object.keys(g).sort((a, b) => a - b).map((so) => `<div class="nhom-viec"><div class="ten-nhom">${so}. ${c.esc(g[so][0].tt_ten)} <span class="nhan ${g[so].some((x) => x.gap) ? 'do' : ''}">${g[so].length}</span></div>${dongViecToi(g[so])}</div>`).join(''); };
   const [v, hh] = await Promise.all([
     c.kho.ham('crm_viec_cua_toi', { p_ai: c.toi }),
     c.kho.ham('crm_hoa_hong', { p_thang: c.homNay().slice(0, 8) + '01', p_ai: c.toi }).catch(() => null),
@@ -831,13 +838,13 @@ export async function trangCuaToi(c) {
   const minh = hh && hh.nguoi ? hh.nguoi.find((x) => x.ma === toi.ma) : null;
   const gap = v.viec.filter((x) => x.gap).length;
   const theoKhau = {};
-  for (const x of v.viec) (theoKhau[x.vai_chiu] ||= []).push(x);
+  for (const k of THU_TU_KHAU) for (const x of v.viec) if ((x.khau || x.vai_chiu) === k) (theoKhau[k] ||= []).push(x);
   const homNay = v.ca_sap.filter((x) => x.ngay === v.hom_nay), sapToi = v.ca_sap.filter((x) => x.ngay !== v.hom_nay);
   const dongCa = (x) => `<a class="dong-ca" href="#/ca/${x.id}"><span class="gio">${x.ngay === v.hom_nay ? (x.gio || '--:--') : c.THU[new Date(x.ngay + 'T12:00:00').getDay()] + ' ' + c.ngayVN(x.ngay)}</span>
       <span><span class="ten">${c.esc(x.khach)}</span><br><span class="phu">${c.esc(x.goi)} · bạn: <b>${x.vai.map((k) => TEN_VAI_TOI[k] || k).join(', ')}</b>${x.ekip.length ? ' · ' + x.ekip.map((e) => c.esc(e.ten)).join(', ') : ''}</span></span>
       <span style="text-align:right">${x.ngay !== v.hom_nay && x.gio ? `<span class="phu">${x.gio}</span>` : ''}</span></a>`;
   c.trang.innerHTML = c.dauTrang(`Việc của tôi · ${c.esc(toi.ten)}`, gap ? `${gap} việc cần làm ngay` : v.viec.length ? `${v.viec.length} việc đang chờ bạn` : 'Không có việc nào đang chờ bạn ✓',
-    'Chỉ những ca có tên bạn và đang dừng ở khâu của bạn. Thấy thiếu ca nào thì báo sale sửa ekip.',
+    'Ca có tên bạn trong ekip đang ở khâu của bạn' + (c.vaiToi.includes('sale_online') ? ' · sale thấy mọi ca đang chạy' : '') + '. Thấy thiếu ca nào thì báo sale sửa ekip.',
     c.laChu() ? '<a class="nut phu" href="#/">Xem cả studio</a>' : '') + `
     <div class="so-lieu bon">
       ${c.theSo('#/toi', 'canh', ['var(--do-nhat)', 'var(--do)'], 'Việc gấp', gap, 'trễ hẹn hoặc khách đòi sửa')}
@@ -851,8 +858,7 @@ export async function trangCuaToi(c) {
         ${sapToi.length ? `<div class="nhan-nho mo" style="margin:12px 0 4px;font-weight:700">SẮP TỚI</div>${sapToi.map(dongCa).join('')}` : ''}
       </div>
       <div>${Object.keys(theoKhau).length ? Object.entries(theoKhau).map(([k, ds]) => `<div class="bo-phan"><div class="dau-bp"><div><b>${TEN_VAI_TOI[k] || k}</b><div class="mo nho">${VIEC_CUA_VAI[k] || ''}</div></div><span class="tong-bp">${ds.length}</span></div>
-          <div class="nhom-viec">${ds.slice(0, 30).map((x) => `<a class="viec ${x.gap ? 'gap' : ''}" href="#/ca/${x.id}"><span class="ten">${c.esc(x.khach)}</span><span class="mo nho">${c.esc(x.goi)} · ${c.esc(x.tt_ten)}</span><span class="ly-do">${c.esc(x.ly_do)}</span></a>`).join('')}
-          ${ds.length > 30 ? `<div class="con-nua">… và ${ds.length - 30} việc nữa</div>` : ''}</div></div>`).join('')
+          ${k === 'sale_online' ? nhomTheoTT(ds) : `<div class="nhom-viec">${dongViecToi(ds)}</div>`}</div>`).join('')
         : '<div class="the"><div class="trong">Không có ca nào đang chờ khâu của bạn ✓</div></div>'}</div>
     </div>`;
 }
