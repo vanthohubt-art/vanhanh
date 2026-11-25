@@ -9,6 +9,30 @@ import * as kh from './khoang.js?v=20261110b';
 const KENH = { facebook: 'Facebook', zalo: 'Zalo', tiktok: 'TikTok', instagram: 'Instagram', gioi_thieu: 'Người quen giới thiệu', vang_lai: 'Vãng lai', website: 'Website', khac: 'Khác' };
 const TT_LEAD = { moi: ['Mới', 'tt1'], dang_tu_van: ['Đang tư vấn', 'tt3'], da_bao_gia: ['Đã báo giá', 'tt4'], hen_den: ['Hẹn đến studio', 'tt6'], da_chot: ['Đã chốt', 'tt2'], mat: ['Mất', 'tt5'] };
 const KHOAN = { mat_bang: 'Mặt bằng', dien_nuoc: 'Điện nước', luong: 'Lương', quang_cao: 'Quảng cáo', in_an: 'In ấn', dao_cu_trang_phuc: 'Đạo cụ · trang phục', thiet_bi: 'Thiết bị', van_phong_pham: 'Văn phòng phẩm', an_uong: 'Ăn uống', van_chuyen: 'Vận chuyển', sua_chua: 'Sửa chữa', khac: 'Khác' };
+// Link mời khách đánh giá (25/11/2026). Google: Place ID của Home Studio trên Maps (5,0★ · 133 đánh giá), tính từ mã
+//   địa điểm 0x3135a94ac5353ce1:0xa5be8d3a39253fea; link writereview mở thẳng hộp "Viết đánh giá" (khách phải đăng nhập Google).
+//   Có link ngắn g.page/r/…/review trong Google Business Profile thì thay vào cũng được.
+// Facebook: page chính 101440418408312 (ChupAnhChoBeHomestudio), tab Đánh giá / Đề xuất.
+export const LINK_DANH_GIA = {
+  google: 'https://search.google.com/local/writereview?placeid=ChIJ4Tw1xUqpNTER6j8lOTqNvqU',
+  facebook: 'https://www.facebook.com/ChupAnhChoBeHomestudio/reviews',
+};
+export const tinMoiDanhGia = () => `Dạ Home Studio cảm ơn ba mẹ đã tin tưởng gửi gắm những khoảnh khắc của gia đình cho Home ạ 🥰
+Nếu ba mẹ hài lòng với bộ ảnh, ba mẹ dành 1 phút để lại vài dòng cảm nhận giúp Home nhé — mỗi lời của ba mẹ là động lực rất lớn với cả ekip ạ.
+⭐ Đánh giá trên Google: ${LINK_DANH_GIA.google}
+👍 Đánh giá trên Facebook: ${LINK_DANH_GIA.facebook}
+Home cảm ơn ba mẹ nhiều ạ ❤️`;
+function chepChu(c, s, bao) {
+  const xong = () => c.bao(bao);
+  const cu = () => { const t = Object.assign(document.createElement('textarea'), { value: s }); t.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(t); t.select(); let ok = false; try { ok = document.execCommand('copy'); } catch { /* bỏ qua */ } t.remove(); return ok; };
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(s).then(xong, () => (cu() ? xong() : c.bao('Không chép được', true)));
+  else if (cu()) xong(); else c.bao('Không chép được', true);
+}
+const nutMoiDanhGia = (id) => `<button class="nut nho" data-moi-dg="${id}" title="Chép tin nhắn kèm link Google + Facebook để dán vào Zalo/Messenger">Chép tin mời đánh giá</button>`;
+function ganNutMoiDanhGia(c, goc) {
+  goc.querySelectorAll('[data-moi-dg]').forEach((b) => (b.onclick = () => chepChu(c, tinMoiDanhGia(), 'Đã chép tin mời đánh giá — dán vào Zalo/Messenger gửi khách')));
+  goc.querySelectorAll('[data-chep-link]').forEach((b) => (b.onclick = () => chepChu(c, LINK_DANH_GIA[b.dataset.chepLink], 'Đã chép link ' + (b.dataset.chepLink === 'google' ? 'Google' : 'Facebook'))));
+}
 const VAN_DE = { chup_lau: 'Chụp lâu', anh_xau: 'Ảnh chưa đẹp', tra_tre: 'Trả ảnh trễ', thai_do: 'Thái độ', gia: 'Giá cao', phat_sinh: 'Phát sinh bất ngờ', khac: 'Khác' };
 const CSKH = { nhac_chon_anh: ['Nhắc khách chọn ảnh', 'Đã gửi ảnh gốc mà khách chưa chọn'], xin_danh_gia: ['Xin đánh giá sau chụp', 'Trả ảnh 2–14 ngày, chưa có đánh giá'],
   sinh_nhat: ['Sinh nhật bé sắp tới', 'Mời chụp sinh nhật — trong 30 ngày tới'],
@@ -336,7 +360,7 @@ export async function trangCskh(c) {
         ${ds.map((v) => `<div class="nhom-viec"><div class="hang-nut"><a href="#/ca/${v.id}" style="text-decoration:none"><b>${c.esc(v.khach)}</b> <span class="mo nho">${c.esc(v.goi)}</span></a></div>
           <div class="mo nho" style="margin:2px 0 6px">${c.esc(v.ly_do)}</div>
           <div class="hang-nut">${c.sdtHtml(v.sdt)}${v.sdt ? `<a class="nut phu nho" href="https://zalo.me/${c.esc(v.sdt)}" target="_blank" rel="noopener">Zalo</a>` : ''}
-            <button class="nut nho" data-lh="${k}|${v.id}|${v.khach_id}">Đã liên hệ</button>${k === 'xin_danh_gia' ? `<button class="nut phu nho" data-dg="${v.id}">Ghi đánh giá</button>` : ''}</div></div>`).join('')
+            <button class="nut nho" data-lh="${k}|${v.id}|${v.khach_id}">Đã liên hệ</button>${k === 'xin_danh_gia' ? nutMoiDanhGia(v.id) + `<button class="nut phu nho" data-dg="${v.id}">Ghi đánh giá</button>` : ''}</div></div>`).join('')
           || '<div class="nhom-viec mo">Không có việc ✓</div>'}</div>`;
     }).join('')}</div>
     <div class="the"><h2>Nhật ký chăm sóc</h2><div class="cuon-doc" style="max-height:360px">${r.nhat_ky.map((x) => `<div class="gd"><span><b style="font-weight:600">${c.esc(x.khach || '')}</b> <span class="mo nho">${x.ma || ''}</span><br>
@@ -351,6 +375,7 @@ export async function trangCskh(c) {
     });
   }));
   document.querySelectorAll('[data-dg]').forEach((b) => (b.onclick = () => moDanhGia(c, Number(b.dataset.dg), () => trangCskh(c))));
+  ganNutMoiDanhGia(c, document);
 }
 // ═════════ CHỜ KHÁCH LẤY ẢNH (025) ═════════
 // Mọi ca đang "8. Xuất in", kể cả ca cũ — các màn khác chỉ xét 45–90 ngày nên khách lâu chưa lấy không ai nhắc.
@@ -734,6 +759,8 @@ export async function veHoSoThem(c, h, chua) {
         <label>Người lớn<input id="mn-nl" type="number" min="0" value="0" inputmode="numeric"></label><label>Bé<input id="mn-te" type="number" min="0" value="0" inputmode="numeric"></label></div>
       <div class="hang-nut" style="margin-top:8px"><button class="nut phu nho" id="mn-luu">+ Thêm thợ make</button></div>` : ''}</div>` : ''}
     <div class="the"><div class="dau-the"><h2>Đánh giá của khách</h2><span class="phai"><button class="nut phu nho" id="dg-moi">+ Ghi đánh giá</button></span></div>
+      <div class="mo nho" style="margin-bottom:6px">Gửi khách link để khách tự đánh giá trên Google Maps và Facebook. Khách chấm xong (hoặc nói qua điện thoại) thì bấm "+ Ghi đánh giá" để lưu số sao — máy dùng số này cho điểm chất lượng từng thợ và báo cáo Chất lượng dịch vụ.</div>
+      <div class="hang-nut" style="margin-bottom:8px">${nutMoiDanhGia(h.id)}<button class="nut phu nho" data-chep-link="google">Chép link Google</button><button class="nut phu nho" data-chep-link="facebook">Chép link Facebook</button></div>
       ${t.danh_gia.map((d) => `<div class="gd"><span>${d.nhan_xet ? '"' + c.esc(d.nhan_xet) + '"' : '<span class="mo">không ghi lời</span>'} ${d.van_de.map((v) => `<span class="nhan do">${VAN_DE[v] || v}</span>`).join(' ')}</span><b>${'★'.repeat(d.diem)} <span class="mo nho">${d.luc}</span></b></div>`).join('') || '<div class="mo">Chưa có.</div>'}</div>`;
   const veLai = () => veHoSoThem(c, h, chua);
   veAlbum(c, h, t.album || {}, chua.querySelector('#the-album'), veLai);
@@ -756,6 +783,7 @@ export async function veHoSoThem(c, h, chua) {
   });
   chua.querySelector('#vd-sua').onclick = () => moVideo(c, { id: h.id, khach: h.khach, ...(t.video || {}) }, veLai);
   chua.querySelector('#dg-moi').onclick = () => moDanhGia(c, h.id, veLai);
+  ganNutMoiDanhGia(c, chua);
   const mk = chua.querySelector('#mk-luu');
   if (mk) mk.onclick = () => c.chay(async () => {
     await c.kho.ham('crm_checkout_makeup', { p_hop_dong: h.id, p_nhan_su: Number(c.$('#mk-ns').value), p_nguoi_lon: Number(c.$('#mk-nl').value), p_tre_em: Number(c.$('#mk-te').value), p_ghi: null, p_ai: c.toi });
